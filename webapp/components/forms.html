@@ -1,0 +1,255 @@
+<!-- Inclusão de formulários e lógicas de cadastro para contas fixas e pontuais -->
+<div id="forms-script-anchor" hidden></div>
+
+<script>
+  const toastDurations = {
+    success: 3500,
+    error: 4500,
+  };
+
+  function showToast(type, message) {
+    const toast = document.createElement("div");
+    toast.className = `toast toast-${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add("visible"), 10);
+    setTimeout(() => {
+      toast.classList.remove("visible");
+      setTimeout(() => toast.remove(), 400);
+    }, toastDurations[type] || 3000);
+  }
+
+  function callServerFunction(functionName, payload) {
+    return new Promise((resolve, reject) => {
+      if (typeof google !== "undefined" && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)[functionName](payload);
+      } else if (typeof server !== "undefined" && typeof server[functionName] === "function") {
+        Promise.resolve(server[functionName](payload)).then(resolve).catch(reject);
+      } else {
+        console.warn(`Server function ${functionName} not available. Returning mock response.`);
+        resolve({ status: "mocked" });
+      }
+    });
+  }
+
+  function validateRequired(value) {
+    return value !== undefined && value !== null && String(value).trim() !== "";
+  }
+
+  function validateNumber(value) {
+    if (!validateRequired(value)) return false;
+    const numeric = Number(value);
+    return Number.isFinite(numeric) && numeric >= 0;
+  }
+
+  function validateDayRange(value) {
+    const day = Number(value);
+    return Number.isInteger(day) && day >= 1 && day <= 31;
+  }
+
+  function getDateDay(value) {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date.getDate();
+  }
+
+  function bindFormSubmission(form, handler) {
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      handler(event, form);
+    });
+  }
+
+  function renderContaFixaForm(containerId) {
+    const container = typeof containerId === "string" ? document.getElementById(containerId) : containerId;
+    if (!container) return;
+
+    container.innerHTML = `
+      <form id="conta-fixa-form" class="form-grid">
+        <div class="form-field">
+          <label for="nomeContaFixa">Nome da conta *</label>
+          <input type="text" id="nomeContaFixa" name="nomeConta" required />
+        </div>
+        <div class="form-field">
+          <label for="categoriaContaFixa">Categoria *</label>
+          <input type="text" id="categoriaContaFixa" name="categoria" required />
+        </div>
+        <div class="form-field">
+          <label for="tipoPessoaContaFixa">Tipo de pessoa *</label>
+          <select id="tipoPessoaContaFixa" name="tipoPessoa" required>
+            <option value="">Selecione</option>
+            <option value="PF">Pessoa Física</option>
+            <option value="PJ">Pessoa Jurídica</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="valorPrevistoContaFixa">Valor previsto *</label>
+          <input type="number" id="valorPrevistoContaFixa" name="valorPrevisto" min="0" step="0.01" required />
+        </div>
+        <div class="form-field">
+          <label for="diaRecorrenciaContaFixa">Dia de recorrência (1-31) *</label>
+          <input type="number" id="diaRecorrenciaContaFixa" name="diaRecorrencia" min="1" max="31" required />
+        </div>
+        <div class="form-field">
+          <label for="metodoPagamentoContaFixa">Método de pagamento *</label>
+          <input type="text" id="metodoPagamentoContaFixa" name="metodoPagamento" required />
+        </div>
+        <div class="form-field">
+          <label for="observacoesContaFixa">Observações</label>
+          <textarea id="observacoesContaFixa" name="observacoes" rows="2"></textarea>
+        </div>
+        <div class="form-field checkbox-inline">
+          <label for="contaFixaAtiva">
+            <input type="checkbox" id="contaFixaAtiva" name="ativa" checked /> Conta ativa
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Cadastrar conta fixa</button>
+        </div>
+      </form>
+    `;
+
+    const form = container.querySelector("#conta-fixa-form");
+    bindFormSubmission(form, submitContaFixa);
+  }
+
+  function renderContaPontualForm(containerId) {
+    const container = typeof containerId === "string" ? document.getElementById(containerId) : containerId;
+    if (!container) return;
+
+    container.innerHTML = `
+      <form id="conta-pontual-form" class="form-grid">
+        <div class="form-field">
+          <label for="nomeContaPontual">Nome da conta *</label>
+          <input type="text" id="nomeContaPontual" name="nomeConta" required />
+        </div>
+        <div class="form-field">
+          <label for="categoriaContaPontual">Categoria *</label>
+          <input type="text" id="categoriaContaPontual" name="categoria" required />
+        </div>
+        <div class="form-field">
+          <label for="tipoPessoaContaPontual">Tipo de pessoa *</label>
+          <select id="tipoPessoaContaPontual" name="tipoPessoa" required>
+            <option value="">Selecione</option>
+            <option value="PF">Pessoa Física</option>
+            <option value="PJ">Pessoa Jurídica</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="valorPrevistoContaPontual">Valor previsto *</label>
+          <input type="number" id="valorPrevistoContaPontual" name="valorPrevisto" min="0" step="0.01" required />
+        </div>
+        <div class="form-field">
+          <label for="dataVencimentoContaPontual">Data de vencimento *</label>
+          <input type="date" id="dataVencimentoContaPontual" name="dataVencimento" required />
+        </div>
+        <div class="form-field">
+          <label for="metodoPagamentoContaPontual">Método de pagamento *</label>
+          <input type="text" id="metodoPagamentoContaPontual" name="metodoPagamento" required />
+        </div>
+        <div class="form-field">
+          <label for="observacoesContaPontual">Observações</label>
+          <textarea id="observacoesContaPontual" name="observacoes" rows="2"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn btn-primary">Cadastrar conta pontual</button>
+        </div>
+      </form>
+    `;
+
+    const form = container.querySelector("#conta-pontual-form");
+    bindFormSubmission(form, submitContaPontual);
+  }
+
+  async function submitContaFixa(event, formRef) {
+    const form = formRef || (event && event.target);
+    if (!form) return;
+
+    const data = {
+      nomeConta: form.nomeConta.value.trim(),
+      categoria: form.categoria.value.trim(),
+      tipoPessoa: form.tipoPessoa.value,
+      valorPrevisto: form.valorPrevisto.value,
+      diaRecorrencia: form.diaRecorrencia.value,
+      metodoPagamento: form.metodoPagamento.value.trim(),
+      observacoes: form.observacoes.value.trim(),
+      ativa: form.ativa.checked,
+    };
+
+    if (!validateRequired(data.nomeConta) || !validateRequired(data.categoria) || !validateRequired(data.tipoPessoa)) {
+      showToast("error", "Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    if (!validateNumber(data.valorPrevisto)) {
+      showToast("error", "Informe um valor numérico válido.");
+      return;
+    }
+
+    if (!validateDayRange(data.diaRecorrencia)) {
+      showToast("error", "Dia de recorrência deve estar entre 1 e 31.");
+      return;
+    }
+
+    try {
+      await callServerFunction("cadastrarContaFixa", data);
+      showToast("success", "Conta fixa cadastrada com sucesso.");
+      form.reset();
+      if (typeof carregarContasFixas === "function") carregarContasFixas();
+      if (typeof carregarContasMes === "function") carregarContasMes();
+    } catch (error) {
+      console.error("Erro ao cadastrar conta fixa", error);
+      showToast("error", "Erro ao cadastrar conta fixa. Tente novamente.");
+    }
+  }
+
+  async function submitContaPontual(event, formRef) {
+    const form = formRef || (event && event.target);
+    if (!form) return;
+
+    const data = {
+      nomeConta: form.nomeConta.value.trim(),
+      categoria: form.categoria.value.trim(),
+      tipoPessoa: form.tipoPessoa.value,
+      valorPrevisto: form.valorPrevisto.value,
+      dataVencimento: form.dataVencimento.value,
+      metodoPagamento: form.metodoPagamento.value.trim(),
+      observacoes: form.observacoes.value.trim(),
+    };
+
+    if (!validateRequired(data.nomeConta) || !validateRequired(data.categoria) || !validateRequired(data.tipoPessoa) || !validateRequired(data.dataVencimento)) {
+      showToast("error", "Preencha todos os campos obrigatórios.");
+      return;
+    }
+
+    if (!validateNumber(data.valorPrevisto)) {
+      showToast("error", "Informe um valor numérico válido.");
+      return;
+    }
+
+    const vencimentoDay = getDateDay(data.dataVencimento);
+    if (vencimentoDay === null || !validateDayRange(vencimentoDay)) {
+      showToast("error", "Selecione uma data de vencimento válida.");
+      return;
+    }
+
+    try {
+      await callServerFunction("cadastrarContaPontual", data);
+      showToast("success", "Conta pontual cadastrada com sucesso.");
+      form.reset();
+      if (typeof carregarContasPontuais === "function") carregarContasPontuais();
+      if (typeof carregarContasMes === "function") carregarContasMes();
+    } catch (error) {
+      console.error("Erro ao cadastrar conta pontual", error);
+      showToast("error", "Erro ao cadastrar conta pontual. Tente novamente.");
+    }
+  }
+
+  function initForms() {
+    renderContaFixaForm("conta-fixa-container");
+    renderContaPontualForm("conta-pontual-container");
+  }
+
+  document.addEventListener("DOMContentLoaded", initForms);
+</script>
