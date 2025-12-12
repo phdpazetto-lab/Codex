@@ -29,6 +29,8 @@ const CONTAS_MENSAL_HEADERS = [
 ];
 const LOGS_HEADERS = ['TIMESTAMP', 'EVENTO', 'DETALHES', 'USUARIO'];
 
+const PROPERTY_DEFAULT_SPREADSHEET_ID = 'DEFAULT_SPREADSHEET_ID';
+
 function createOrResetSpreadsheet(spreadsheetId, spreadsheetName) {
   const ss = getOrCreateSpreadsheet(spreadsheetId, spreadsheetName);
   const requiredSheets = [
@@ -90,17 +92,41 @@ function seedDemoData(spreadsheetId) {
 }
 
 function getOrCreateSpreadsheet(spreadsheetId, spreadsheetName) {
-  if (spreadsheetId) {
-    return SpreadsheetApp.openById(spreadsheetId);
+  const props = PropertiesService.getScriptProperties();
+
+  const preferredId = spreadsheetId || props.getProperty(PROPERTY_DEFAULT_SPREADSHEET_ID);
+  if (preferredId) {
+    try {
+      const ss = SpreadsheetApp.openById(preferredId);
+      props.setProperty(PROPERTY_DEFAULT_SPREADSHEET_ID, preferredId);
+      return ss;
+    } catch (e) {
+      props.deleteProperty(PROPERTY_DEFAULT_SPREADSHEET_ID);
+    }
   }
 
   const active = SpreadsheetApp.getActiveSpreadsheet();
   if (active) {
+    props.setProperty(PROPERTY_DEFAULT_SPREADSHEET_ID, active.getId());
     return active;
   }
 
   const name = spreadsheetName || 'StarPay - Controle de Contas';
-  return SpreadsheetApp.create(name);
+  const created = SpreadsheetApp.create(name);
+  props.setProperty(PROPERTY_DEFAULT_SPREADSHEET_ID, created.getId());
+  return created;
+}
+
+// Explicitly pick a spreadsheet to reuse on subsequent executions.
+// Call once with a target ID to avoid creating new sheets:
+//   setDefaultSpreadsheetId('YOUR_SPREADSHEET_ID');
+function setDefaultSpreadsheetId(spreadsheetId) {
+  if (!spreadsheetId) {
+    throw new Error('spreadsheetId is required');
+  }
+  const ss = SpreadsheetApp.openById(spreadsheetId);
+  PropertiesService.getScriptProperties().setProperty(PROPERTY_DEFAULT_SPREADSHEET_ID, ss.getId());
+  return ss.getUrl();
 }
 
 function upsertSheet(spreadsheet, name, headers) {
