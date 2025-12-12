@@ -44,3 +44,9 @@ Este guia explica o que o script `setup.gs` cria e como usá-lo para evitar plan
 - O ID da planilha é a string entre `/d/` e `/edit` na URL da planilha.
 - Se a planilha ativa já estiver aberta no Apps Script, o script a reutiliza automaticamente.
 - Se faltar alguma aba, basta reexecutar `createOrResetSpreadsheet` ou `setupDemoSpreadsheet`.
+
+## Próximos passos
+- Revise os valores na aba **CONFIG** (e-mails de notificação, fuso horário e janelas de aviso) para combinar com seu fluxo real.
+- Substitua os exemplos de **CONTAS_FIXAS** e **CONTAS_MENSAL** pelos seus lançamentos reais e remova os dados demo que não precisar.
+- Ative os gatilhos do seu projeto principal (por exemplo, agenda semanal ou diária) apontando para as funções que consomem essas abas.
+- Se for colaborar com outra pessoa, compartilhe a planilha com permissão de edição e mantenha os cabeçalhos protegidos.
