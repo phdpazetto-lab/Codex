@@ -78,3 +78,24 @@ Your `Index` file should end with the CSS and JS injected inline by those includ
 | n/a | `Code.gs` | Contains `include` and `doGet`. |
 
 Following these steps, you can keep editing CSS and JS locally while still deploying through the Apps Script interface.
+
+## How to confirm the deployment worked
+Use this quick checklist to ensure your setup matches the screenshots you shared:
+
+1. In the **Deployments** panel, the latest run should show **Tipo: App da Web** and **Status: Concluído** (finished) with `doGet` listed as the entry point.
+2. When you open the WebApp URL in a browser, you should see the `StarPay` heading and the welcome text from `webapp/index.html`.
+3. Inside the Apps Script editor, your project tree should list four files:
+   * `Code.gs` containing `include` and `doGet`.
+   * `Index.html` with the `<?!= include('Styles'); ?>` and `<?!= include('App'); ?>` injections.
+   * `Styles.html` wrapping the CSS in a `<style>` tag.
+   * `App.html` wrapping the JS in a `<script type="module">` tag.
+
+If these items match, the scaffold is correctly deployed in Apps Script.
+
+## Ready for the next step?
+Once the shell is working, you can proceed to wire up real behavior:
+
+* **Connect to Google Sheets**: add read/write helper functions in `Code.gs` that call `SpreadsheetApp` and expose them to the client with `google.script.run` in `app.js`.
+* **Handle user actions**: replace the sample click handler in `app.js` with calls to those helpers, then display results in the DOM.
+* **Lock down permissions**: after testing, re‑deploy the WebApp with the minimum access your team needs (e.g., your domain instead of “Anyone with the link”).
+* **Iterate locally**: keep editing the files under `webapp/`, then re‑paste them into `App`, `Styles`, and `Index` whenever you change the UI.
