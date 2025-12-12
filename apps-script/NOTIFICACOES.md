@@ -9,6 +9,8 @@ Este documento resume como o `notificacoes.gs` funciona, os pré-requisitos para
 - **previewNotificacao(id, tipoAviso)** gera o HTML de um aviso para inspeção no log sem enviar e-mail.
 
 ## Pré-requisitos essenciais para uma execução perfeita
+0. **Vincular ao arquivo correto da planilha**
+   - Certifique-se de que o Apps Script esteja associado à planilha de produção ou que `SpreadsheetApp.openById('<ID_DA_PLANILHA>')` aponte explicitamente para o arquivo certo. Se o script estiver ligado a um arquivo errado/inexistente, `getActiveSpreadsheet()` será `null` e chamadas como `getSheetByName` falharão (erro "Cannot read properties of null").
 1. **Planilhas existentes**
    - `CONFIG` com as colunas `Parâmetro` (A) e `Valor` (B) preenchidas.
    - `CONTAS_MENSAL` com as colunas esperadas, incluindo `NOTIFICACAO_ENVIADA` na coluna N (índice 14 1-based).
