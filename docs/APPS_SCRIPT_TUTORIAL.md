@@ -99,3 +99,14 @@ Once the shell is working, you can proceed to wire up real behavior:
 * **Handle user actions**: replace the sample click handler in `app.js` with calls to those helpers, then display results in the DOM.
 * **Lock down permissions**: after testing, re‑deploy the WebApp with the minimum access your team needs (e.g., your domain instead of “Anyone with the link”).
 * **Iterate locally**: keep editing the files under `webapp/`, then re‑paste them into `App`, `Styles`, and `Index` whenever you change the UI.
+
+## Quick action plan from here
+If your screens match the screenshots you shared, you’re ready to move on. Here’s a concise checklist for what to do next:
+
+1. **Decide your data model**: confirm the Sheets tabs and column names you want to read/write (see `docs/STARPAY_SPEC.md`).
+2. **Add server helpers**: in `Code.gs`, create functions like `getDashboardData()` and `recordPayment()` that read/write rows. Return plain objects or arrays.
+3. **Call helpers from the UI**: in `app.js`, swap the demo click handler for `google.script.run.withSuccessHandler(renderDashboard).getDashboardData();` and update the DOM.
+4. **Redeploy after each change**: repaste any updated HTML/CSS/JS into `Index`, `Styles`, and `App`, then click **Deploy → Manage deployments → Edit → Deploy**.
+5. **Tighten access**: once verified, narrow WebApp access (e.g., to your domain) and test again.
+
+Following this checklist will take you from the working shell you have now to a functioning StarPay dashboard backed by Sheets.
