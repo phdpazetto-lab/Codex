@@ -32,6 +32,16 @@ The script sets up two automated jobs for a spreadsheet-backed workflow:
 - If you change `HORA_ENVIO_DIARIO`, run `configurarTriggers()` again to update the trigger times.
 - The functions `gerarMesAutomatico` and `enviarNotificacoesDiarias` must exist in the same project; otherwise, trigger execution will fail at runtime.
 
+## Step-by-step: create the triggers with the right configuration
+1. Open the **bound** spreadsheet and confirm the `CONFIG` sheet has `HORA_ENVIO_DIARIO` in column A with a `HH:MM` time in column B (for example, `08:30`).
+2. In the spreadsheet, click **Extensions → Apps Script** to open the script project that contains `triggers.gs` and the handlers `gerarMesAutomatico` and `enviarNotificacoesDiarias`.
+3. In the Apps Script editor, ensure the active project matches the spreadsheet (you should see the `CONFIG` sheet name in the left-side navigator under **Services → Spreadsheet** if bound).
+4. Select the `configurarTriggers` function from the run dropdown, then click **Run**. Approve any authorization prompts so the script can create triggers.
+5. Wait for execution to finish. Open **Triggers** (clock icon) in the left toolbar and verify two entries exist:
+   - **Monthly**: event source **Time-driven**, type **Month timer**, day **1**, time set to the configured `HORA_ENVIO_DIARIO`.
+   - **Daily**: event source **Time-driven**, type **Day timer**, frequency **Every day**, time set to the same `HORA_ENVIO_DIARIO`.
+6. If you later change `HORA_ENVIO_DIARIO`, repeat steps 1 and 4 to recreate the triggers at the new time (the script removes old triggers automatically).
+
 ## Requirements for a perfect run
 - The user running `configurarTriggers()` has permission to create time-based triggers in the project.
 - The spreadsheet is accessible (i.e., `SpreadsheetApp.getActiveSpreadsheet()` is available when running bound to the sheet).
