@@ -31,6 +31,10 @@ const LOGS_HEADERS = ['TIMESTAMP', 'EVENTO', 'DETALHES', 'USUARIO'];
 
 const PROPERTY_DEFAULT_SPREADSHEET_ID = 'DEFAULT_SPREADSHEET_ID';
 
+function getStoredSpreadsheetId(props) {
+  return props.getProperty(PROPERTY_DEFAULT_SPREADSHEET_ID);
+}
+
 function createOrResetSpreadsheet(spreadsheetId, spreadsheetName) {
   const ss = getOrCreateSpreadsheet(spreadsheetId, spreadsheetName);
   const requiredSheets = [
@@ -94,7 +98,7 @@ function seedDemoData(spreadsheetId) {
 function getOrCreateSpreadsheet(spreadsheetId, spreadsheetName) {
   const props = PropertiesService.getScriptProperties();
 
-  const preferredId = spreadsheetId || props.getProperty(PROPERTY_DEFAULT_SPREADSHEET_ID);
+  const preferredId = spreadsheetId || getStoredSpreadsheetId(props);
   if (preferredId) {
     try {
       const ss = SpreadsheetApp.openById(preferredId);
@@ -127,6 +131,10 @@ function setDefaultSpreadsheetId(spreadsheetId) {
   const ss = SpreadsheetApp.openById(spreadsheetId);
   PropertiesService.getScriptProperties().setProperty(PROPERTY_DEFAULT_SPREADSHEET_ID, ss.getId());
   return ss.getUrl();
+}
+
+function clearDefaultSpreadsheetId() {
+  PropertiesService.getScriptProperties().deleteProperty(PROPERTY_DEFAULT_SPREADSHEET_ID);
 }
 
 function upsertSheet(spreadsheet, name, headers) {
