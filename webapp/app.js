@@ -1,47 +1,39 @@
-const navLinks = Array.from(document.querySelectorAll('.nav-link'));
-const sections = Array.from(document.querySelectorAll('.page-section'));
-const toastContainer = document.getElementById('toast-container');
+// Entry point for the StarPay WebApp UI.
+// Use ES module exports for shared utilities as the WebApp grows.
 
-function setActiveSection(sectionId) {
-  navLinks.forEach((link) => {
-    const isActive = link.dataset.section === sectionId;
-    link.classList.toggle('active', isActive);
-    if (isActive) {
-      link.setAttribute('aria-current', 'page');
-    } else {
-      link.removeAttribute('aria-current');
-    }
-  });
+const state = {
+  initialized: false,
+};
 
-  sections.forEach((section) => {
-    section.classList.toggle('active', section.id === sectionId);
-  });
+function renderWelcome() {
+  const container = document.getElementById('main-content');
+  if (!container) return;
+
+  container.innerHTML = `
+    <h2>Welcome</h2>
+    <p class="section-description">
+      Use this shell to connect the WebApp to your Google Apps Script backend and Sheets data.
+      Replace this card with navigation, forms, and dashboards tailored to the StarPay spec.
+    </p>
+    <button class="button-primary" id="load-data">Load sample data</button>
+  `;
+
+  const button = document.getElementById('load-data');
+  button?.addEventListener('click', handleLoadSampleData);
 }
 
-function createToast(message, variant = 'info', duration = 3000) {
-  if (!toastContainer) return;
-
-  const toast = document.createElement('div');
-  toast.className = `toast ${variant}`;
-  toast.textContent = message;
-  toastContainer.appendChild(toast);
-
-  setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(6px)';
-    setTimeout(() => toast.remove(), 200);
-  }, duration);
+function handleLoadSampleData() {
+  // Placeholder for future google.script.run calls.
+  console.info('Sample action triggered. Wire this up to Apps Script methods.');
 }
 
-navLinks.forEach((link) => {
-  link.addEventListener('click', () => {
-    const targetId = link.dataset.section;
-    setActiveSection(targetId);
-    createToast(`Você está em: ${link.textContent}`, 'info', 1500);
-  });
-});
-
-// Fallback: ensure the first section is visible if none are marked active
-if (!sections.some((section) => section.classList.contains('active'))) {
-  setActiveSection(sections[0]?.id || 'dashboard');
+function init() {
+  if (state.initialized) return;
+  renderWelcome();
+  state.initialized = true;
 }
+
+// Initialize immediately for static hosting; Apps Script can also call init() after load.
+init();
+
+export { init };
