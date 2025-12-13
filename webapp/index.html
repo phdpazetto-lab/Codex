@@ -1,4 +1,94 @@
 <!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>StarPay | Controle de Contas</title>
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <header class="top-nav">
+    <div class="logo">StarPay</div>
+    <nav class="nav-links">
+      <button class="nav-link" data-section="dashboard">Dashboard</button>
+      <button class="nav-link" data-section="contas-fixas">Contas Fixas</button>
+      <button class="nav-link" data-section="contas-pontuais">Contas Pontuais</button>
+      <button class="nav-link" data-section="contas-mes">Contas do Mês</button>
+    </nav>
+  </header>
+
+  <main class="main-container">
+    <section id="dashboard" class="page-section active">
+      <div class="section-header">
+        <h1>Dashboard</h1>
+        <div class="status-legends">
+          <div class="status-item">
+            <span class="status-icon paid" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="img" aria-label="Pago"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"></path></svg>
+            </span>
+            <span class="status-label">Pago</span>
+          </div>
+          <div class="status-item">
+            <span class="status-icon overdue" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="img" aria-label="Atrasado"><path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2zm1 11h-2V7h2zm0 4h-2v-2h2z"></path></svg>
+            </span>
+            <span class="status-label">Atrasado</span>
+          </div>
+          <div class="status-item">
+            <span class="status-icon due-soon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" role="img" aria-label="Vencendo"><path d="M12 4a8 8 0 1 0 8 8 8.009 8.009 0 0 0-8-8zm1 8.268 2.4 2.4-1.414 1.414L11 12.414V7h2z"></path></svg>
+            </span>
+            <span class="status-label">Vencendo</span>
+          </div>
+        </div>
+      </div>
+      <?!= include('components/dashboard'); ?>
+    </section>
+
+    <section id="contas-fixas" class="page-section">
+      <div class="section-header">
+        <h1>Contas Fixas</h1>
+        <p class="section-subtitle">Cadastre e acompanhe os compromissos recorrentes do cliente.</p>
+      </div>
+      <div id="conta-fixa-container" class="content-block"></div>
+      <div id="lista-contas-fixas" class="content-placeholder">Listagem de contas fixas.</div>
+    </section>
+
+    <section id="contas-pontuais" class="page-section">
+      <div class="section-header">
+        <h1>Contas Pontuais</h1>
+        <p class="section-subtitle">Registre cobranças pontuais e acompanhe vencimentos.</p>
+      </div>
+      <div id="conta-pontual-container" class="content-block"></div>
+      <div id="lista-contas-pontuais" class="content-placeholder">Listagem de contas pontuais.</div>
+    </section>
+
+    <section id="contas-mes" class="page-section">
+      <div class="section-header">
+        <h1>Contas do Mês</h1>
+        <p class="section-subtitle">Visão consolidada de tudo que vence no período.</p>
+      </div>
+      <?!= include('contasMes'); ?>
+    </section>
+  </main>
+
+  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <?!= include('App'); ?>
+  <?!= include('forms'); ?>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof loadDashboard === 'function') {
+        loadDashboard();
+      }
+
+      if (typeof carregarContasMes === 'function') {
+        carregarContasMes();
+      }
+    });
+  </script>
+</body>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
