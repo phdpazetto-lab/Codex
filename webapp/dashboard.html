@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Layout Snippet</title>
+  <style>
+    :root {
+      --brand-primary: #1f6feb;
+      --brand-secondary: #0d1117;
+      --brand-accent: #2ea043;
+      --brand-warning: #c7781a;
+      --brand-danger: #d73a49;
+      --brand-surface: #f6f8fa;
+      --brand-border: #d0d7de;
+      --brand-muted: #57606a;
+      --text-main: #161b22;
+      --text-contrast: #ffffff;
+      --shadow-soft: 0 10px 30px rgba(15, 23, 42, 0.08);
+
+      --space-2xs: 4px;
+      --space-xs: 8px;
+      --space-sm: 12px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --space-xl: 32px;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+      margin: 0;
+      background: var(--brand-surface);
+      color: var(--text-main);
+      line-height: 1.6;
+    }
+
+    .main-wrapper {
+      padding: var(--space-xl);
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: var(--space-lg);
+      margin-bottom: var(--space-xl);
+    }
+
+    .kpi-card {
+      background: #ffffff;
+      border: 1px solid var(--brand-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-lg);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+    }
+
+    .kpi-card h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--brand-muted);
+      letter-spacing: 0.01em;
+      text-transform: uppercase;
+    }
+
+    .kpi-value {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--brand-primary);
+    }
+
+    .kpi-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-2xs);
+      font-size: 13px;
+      color: var(--brand-accent);
+    }
+
+    .kpi-trend.negative {
+      color: var(--brand-danger);
+    }
+
+    .data-card {
+      position: relative;
+      background: #ffffff;
+      border: 1px solid var(--brand-border);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-soft);
+      padding: var(--space-lg);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--space-md);
+      gap: var(--space-sm);
+      flex-wrap: wrap;
+    }
+
+    .card-header h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--brand-border);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .data-table thead {
+      background: var(--brand-secondary);
+      color: var(--text-contrast);
+    }
+
+    .data-table th,
+    .data-table td {
+      padding: var(--space-sm) var(--space-md);
+      text-align: left;
+      border-bottom: 1px solid var(--brand-border);
+      white-space: nowrap;
+    }
+
+    .data-table th {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .data-table tbody tr:nth-child(even) {
+      background: #f9fbfd;
+    }
+
+    .data-table tbody tr:hover {
+      background: #f1f4f8;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-2xs);
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-md);
+      border: 1px solid transparent;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+      text-decoration: none;
+    }
+
+    .btn:disabled,
+    .btn[aria-disabled="true"] {
+      opacity: 0.6;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    .btn:hover:not(:disabled),
+    .btn:focus-visible:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .btn-primary {
+      background: var(--brand-primary);
+      color: var(--text-contrast);
+      border-color: var(--brand-primary);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1558d6;
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: var(--text-main);
+      border-color: var(--brand-border);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #f3f4f6;
+    }
+
+    .btn-danger {
+      background: var(--brand-danger);
+      color: var(--text-contrast);
+      border-color: var(--brand-danger);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: #b72f3c;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: var(--space-md) var(--space-lg);
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2xs);
+    }
+
+    label {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--brand-muted);
+    }
+
+    input,
+    select,
+    textarea {
+      padding: var(--space-sm) var(--space-md);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--brand-border);
+      background: #ffffff;
+      font-size: 14px;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: var(--brand-primary);
+      box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.15);
+    }
+
+    input:disabled,
+    select:disabled,
+    textarea:disabled {
+      background: #f3f4f6;
+      cursor: not-allowed;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      text-transform: uppercase;
+      background: #e5e7eb;
+      color: var(--brand-secondary);
+    }
+
+    .badge.success {
+      background: rgba(46, 160, 67, 0.14);
+      color: var(--brand-accent);
+    }
+
+    .badge.warning {
+      background: rgba(199, 120, 26, 0.15);
+      color: var(--brand-warning);
+    }
+
+    .badge.danger {
+      background: rgba(215, 58, 73, 0.16);
+      color: var(--brand-danger);
+    }
+
+    .toast-container {
+      position: fixed;
+      top: var(--space-lg);
+      right: var(--space-lg);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+      z-index: 1000;
+    }
+
+    .toast {
+      min-width: 280px;
+      background: #ffffff;
+      border: 1px solid var(--brand-border);
+      border-left: 6px solid var(--brand-primary);
+      padding: var(--space-md);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      gap: var(--space-sm);
+      align-items: flex-start;
+    }
+
+    .toast.success {
+      border-left-color: var(--brand-accent);
+    }
+
+    .toast.warning {
+      border-left-color: var(--brand-warning);
+    }
+
+    .toast.danger {
+      border-left-color: var(--brand-danger);
+    }
+
+    .toast-title {
+      font-weight: 700;
+      margin-bottom: var(--space-2xs);
+    }
+
+    .toast-message {
+      margin: 0;
+      color: var(--brand-muted);
+    }
+
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: inherit;
+      z-index: 10;
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 4px solid #dce3ec;
+      border-top-color: var(--brand-primary);
+      animation: spin 0.8s linear infinite;
+    }
+
+    .btn .spinner,
+    .badge .spinner {
+      width: 16px;
+      height: 16px;
+      border-width: 3px;
+      border-color: #dce3ec;
+      border-top-color: currentColor;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .helper-text {
+      font-size: 13px;
+      color: var(--brand-muted);
+    }
+
+    .section-title {
+      margin: var(--space-lg) 0 var(--space-sm);
+      font-size: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .main-wrapper {
+        padding: var(--space-lg);
+      }
+
+      .card-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        font-size: 15px;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+
+      .data-table th,
+      .data-table td {
+        padding: var(--space-xs) var(--space-sm);
+      }
+
+      .toast-container {
+        right: var(--space-md);
+        left: var(--space-md);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="main-wrapper">
+    <header class="card-header" aria-label="Dashboard actions">
+      <h1 class="section-title">Operations Overview</h1>
+      <div class="action-row">
+        <button class="btn btn-secondary" type="button">Export CSV</button>
+        <button class="btn btn-primary" type="button">
+          Refresh Data
+        </button>
+      </div>
+    </header>
+
+    <section class="dashboard-grid" aria-label="Key metrics">
+      <article class="kpi-card">
+        <h3>Revenue</h3>
+        <div class="kpi-value">$128,400</div>
+        <div class="kpi-trend">▲ 6.2% vs. last week</div>
+      </article>
+      <article class="kpi-card">
+        <h3>Active Users</h3>
+        <div class="kpi-value">12,418</div>
+        <div class="kpi-trend negative">▼ 1.1% vs. last week</div>
+      </article>
+      <article class="kpi-card">
+        <h3>Conversion</h3>
+        <div class="kpi-value">4.8%</div>
+        <div class="kpi-trend">▲ 0.4 pts vs. last week</div>
+      </article>
+      <article class="kpi-card">
+        <h3>Support SLAs</h3>
+        <div class="kpi-value">96%</div>
+        <div class="kpi-trend">▲ 2.3 pts vs. last week</div>
+      </article>
+    </section>
+
+    <section class="data-card" aria-label="Requests table">
+      <div class="card-header">
+        <h2>Recent Requests</h2>
+        <div class="action-row">
+          <button class="btn btn-secondary" type="button">Filter</button>
+          <button class="btn btn-primary" type="button">New Request</button>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th scope="col">User</th>
+              <th scope="col">Request</th>
+              <th scope="col">Status</th>
+              <th scope="col">Updated</th>
+              <th scope="col">Owner</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ana Fox</td>
+              <td>Quota extension</td>
+              <td><span class="badge success">Done</span></td>
+              <td>2h ago</td>
+              <td>Support</td>
+            </tr>
+            <tr>
+              <td>Samir Rao</td>
+              <td>Billing correction</td>
+              <td><span class="badge warning">Review</span></td>
+              <td>5h ago</td>
+              <td>Finance</td>
+            </tr>
+            <tr>
+              <td>Lee Chan</td>
+              <td>API limit increase</td>
+              <td><span class="badge">Queued</span></td>
+              <td>1d ago</td>
+              <td>Platform</td>
+            </tr>
+            <tr>
+              <td>Maria Lopez</td>
+              <td>Security review</td>
+              <td><span class="badge danger">Blocked</span></td>
+              <td>2d ago</td>
+              <td>Security</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="loading-overlay" aria-hidden="true">
+        <div class="spinner" role="status" aria-label="Loading"></div>
+      </div>
+    </section>
+
+    <section class="data-card" aria-label="Quick actions">
+      <div class="card-header">
+        <h2>Create Request</h2>
+        <div class="helper-text">Use the form to submit a tracked item.</div>
+      </div>
+      <form class="form-grid">
+        <div class="form-group">
+          <label for="requester">Requester</label>
+          <input id="requester" name="requester" placeholder="Full name" />
+        </div>
+        <div class="form-group">
+          <label for="team">Team</label>
+          <select id="team" name="team">
+            <option>Platform</option>
+            <option>Support</option>
+            <option>Security</option>
+            <option>Finance</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="priority">Priority</label>
+          <select id="priority" name="priority">
+            <option>Normal</option>
+            <option>High</option>
+            <option>Urgent</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label for="details">Details</label>
+          <textarea id="details" name="details" rows="3" placeholder="Outline the request"></textarea>
+          <p class="helper-text">Required fields ensure intake quality.</p>
+        </div>
+        <div class="action-row" style="grid-column: 1 / -1; display: flex; gap: var(--space-sm);">
+          <button class="btn btn-secondary" type="reset">Clear</button>
+          <button class="btn btn-primary" type="submit">Submit</button>
+          <button class="btn btn-danger" type="button" disabled>
+            <span class="spinner" aria-hidden="true"></span>
+            Processing
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <div class="toast-container" aria-live="polite">
+    <div class="toast success" role="status">
+      <div>
+        <div class="toast-title">Saved</div>
+        <p class="toast-message">Your changes synced across dashboards.</p>
+      </div>
+    </div>
+    <div class="toast warning" role="status">
+      <div>
+        <div class="toast-title">Pending review</div>
+        <p class="toast-message">Finance approval is required before rollout.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
