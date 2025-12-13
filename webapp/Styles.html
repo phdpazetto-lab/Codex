@@ -1,10 +1,17 @@
+<style>
 :root {
   --bg: #f7f9fb;
   --card: #ffffff;
-  --text: #111827;
+  --text: #0f172a;
   --muted: #6b7280;
   --accent: #2563eb;
+  --accent-strong: #1d4ed8;
   --border: #e5e7eb;
+  --success: #16a34a;
+  --danger: #dc2626;
+  --warning: #f59e0b;
+  --input-bg: #f8fafc;
+  --shadow-soft: 0 12px 30px rgba(17, 24, 39, 0.08);
 }
 
 * {
@@ -109,7 +116,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 1.25rem;
-  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.08);
+  box-shadow: var(--shadow-soft);
 }
 
 .page-section.active {
@@ -123,6 +130,12 @@ body {
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 0.75rem;
+}
+
+.section-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
 }
 
 .status-legends {
@@ -186,44 +199,170 @@ body {
   min-height: 100px;
 }
 
-.app-main {
-  display: grid;
-  gap: 1rem;
-}
-
-.card {
-  background: var(--card);
+.content-block {
+  background: #f8fafc;
   border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+  padding: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
-.card h2 {
-  margin-top: 0;
-  margin-bottom: 0.75rem;
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem 1.25rem;
 }
 
-.button-primary {
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-field label {
+  font-weight: 600;
+  color: #111827;
+  font-size: 0.95rem;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--input-bg);
+  font: inherit;
+  color: var(--text);
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  background: #fff;
+}
+
+.form-field textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.checkbox-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checkbox-inline input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  grid-column: 1 / -1;
+  margin-top: 0.25rem;
+}
+
+.btn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   padding: 0.65rem 1rem;
-  background: var(--accent);
-  color: #fff;
-  border-radius: 8px;
+  border-radius: 10px;
   border: none;
   cursor: pointer;
   font-weight: 600;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
 }
 
-.button-primary:hover {
-  transform: translateY(-1px);
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
   box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  background: var(--accent-strong);
 }
 
 .section-description {
   color: var(--muted);
   margin-top: 0;
 }
+
+#toast-container {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.toast {
+  min-width: 240px;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  background: #111827;
+  color: #f9fafb;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 200ms ease, transform 200ms ease;
+  pointer-events: auto;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.toast-success {
+  background: var(--success);
+}
+
+.toast.toast-error {
+  background: var(--danger);
+}
+
+.toast.toast-info {
+  background: var(--accent);
+}
+
+@media (max-width: 720px) {
+  .top-nav {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .nav-links {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .nav-link {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  #toast-container {
+    right: 0.75rem;
+    left: 0.75rem;
+  }
+}
+</style>
