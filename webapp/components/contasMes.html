@@ -1,423 +1,46 @@
-<!-- Componente Contas do Mês - pronto para inclusão no Apps Script HTML Service -->
-<!-- Inclua este arquivo dentro da seção "Contas do Mês" para renderizar a tabela e os scripts -->
-<div id="contasMesWrapper"></div>
-
-<script>
-  const STATUS_CLASSES = {
-    pago: 'status-badge status-badge--pago',
-    atrasado: 'status-badge status-badge--atrasado',
-    emAberto: 'status-badge status-badge--em-aberto',
-  };
-
-  const STATUS_LABELS = {
-    pago: 'Pago',
-    atrasado: 'Atrasado',
-    emAberto: 'Em aberto',
-  };
-
-  const ROW_STATE_CLASSES = {
-    pago: 'linha-pago',
-    vencendo: 'linha-vencendo',
-    atrasado: 'linha-atrasado',
-  };
-
-  function ensureContasMesStyles() {
-    if (document.getElementById('contas-mes-inline-styles')) return;
-
-    const style = document.createElement('style');
-    style.id = 'contas-mes-inline-styles';
-    style.textContent = `
-      .contas-mes-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        margin-bottom: 12px;
-      }
-
-      .contas-mes-header h3 {
-        margin: 0;
-        font-size: 18px;
-        font-weight: 600;
-        color: #0f172a;
-      }
-
-      .tabela-contas-mes {
-        width: 100%;
-        border-collapse: collapse;
-        background: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 8px;
-        overflow: hidden;
-      }
-
-      .tabela-contas-mes thead {
-        background: #0f172a;
-        color: #ffffff;
-      }
-
-      .tabela-contas-mes th,
-      .tabela-contas-mes td {
-        padding: 10px 12px;
-        text-align: left;
-        vertical-align: middle;
-      }
-
-      .tabela-contas-mes tbody tr:nth-child(odd) {
-        background: #f8fafc;
-      }
-
-      .tabela-contas-mes tbody tr:hover {
-        background: #eef2ff;
-      }
-
-      .status-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 10px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 600;
-        letter-spacing: 0.2px;
-      }
-
-      .status-badge--pago {
-        background: #ecfdf3;
-        color: #166534;
-        border: 1px solid #bbf7d0;
-      }
-
-      .status-badge--atrasado {
-        background: #fef2f2;
-        color: #991b1b;
-        border: 1px solid #fecdd3;
-      }
-
-      .status-badge--em-aberto {
-        background: #eff6ff;
-        color: #1d4ed8;
-        border: 1px solid #bfdbfe;
-      }
-
-      .linha-pago {
-        background: #f0fdf4;
-      }
-
-      .linha-vencendo {
-        background: #fffbeb;
-      }
-
-      .linha-atrasado {
-        background: #fef2f2;
-      }
-
-      .acoes-conta {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-
-      .btn-acao {
-        padding: 6px 10px;
-        border-radius: 6px;
-        border: 1px solid transparent;
-        font-size: 13px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-      }
-
-      .btn-marcar-pago {
-        background: #0ea5e9;
-        color: white;
-        border-color: #0284c7;
-      }
-
-      .btn-marcar-pago:hover {
-        background: #0284c7;
-      }
-
-      .btn-editar {
-        background: #e0f2fe;
-        color: #0369a1;
-        border-color: #bae6fd;
-      }
-
-      .btn-editar:hover {
-        background: #bae6fd;
-      }
-
-      .btn-refresh {
-        background: #111827;
-        color: #ffffff;
-        border-color: #0f172a;
-      }
-
-      .btn-refresh:hover {
-        background: #0f172a;
-      }
-
-      .mini-icone-status {
-        font-size: 12px;
-        opacity: 0.8;
-      }
-
-      .tabela-scroll {
-        overflow-x: auto;
-        width: 100%;
-      }
-
-      @media (max-width: 960px) {
-        .tabela-contas-mes th,
-        .tabela-contas-mes td {
-          font-size: 13px;
-          padding: 8px 10px;
-        }
-
-        .contas-mes-header h3 {
-          font-size: 16px;
-        }
-      }
-    `;
-
-    document.head.appendChild(style);
-  }
-
-  function formatCurrency(valor) {
-    const numero = Number(valor || 0);
-    return numero.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  }
-
-  function parseData(valor) {
-    if (!valor) return null;
-    if (valor instanceof Date) return valor;
-
-    const [ano, mes, dia] = valor.includes('-')
-      ? valor.split('-')
-      : valor.split('/').reverse();
-
-    const data = new Date(ano, Number(mes) - 1, dia);
-    return Number.isNaN(data.getTime()) ? null : data;
-  }
-
-  function obterEstadoTemporal(conta) {
-    const pago = String(conta.pago || conta.PAGO || '').toLowerCase() === 'sim';
-    if (pago) return 'pago';
-
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
-
-    const vencimento = parseData(conta.vencimento || conta.VENCIMENTO);
-    if (!vencimento) return 'normal';
-
-    const diferencaDias = Math.floor((vencimento - hoje) / (1000 * 60 * 60 * 24));
-    if (diferencaDias < 0) return 'atrasado';
-    if (diferencaDias <= 3) return 'vencendo';
-    return 'normal';
-  }
-
-  function criarBadgeStatus(conta) {
-    const pago = String(conta.pago || conta.PAGO || '').toLowerCase() === 'sim';
-    const atrasado = String(conta.atrasado || conta.ATRASADO || '').toLowerCase() === 'sim';
-
-    let chave = 'emAberto';
-    if (pago) chave = 'pago';
-    else if (atrasado) chave = 'atrasado';
-
-    const badge = document.createElement('span');
-    badge.className = STATUS_CLASSES[chave];
-    badge.textContent = STATUS_LABELS[chave];
-
-    const icone = document.createElement('span');
-    icone.className = 'mini-icone-status';
-    icone.textContent = chave === 'pago' ? '✔' : chave === 'atrasado' ? '⚠' : '⏳';
-    badge.prepend(icone);
-
-    return badge;
-  }
-
-  function criarCelula(texto) {
-    const td = document.createElement('td');
-    td.textContent = texto ?? '—';
-    return td;
-  }
-
-  function renderTabelaContasMes(lista = [], filtros = {}) {
-    ensureContasMesStyles();
-
-    const wrapper = document.getElementById('contasMesWrapper');
-    if (!wrapper) return;
-
-    wrapper.innerHTML = '';
-
-    const header = document.createElement('div');
-    header.className = 'contas-mes-header';
-
-    const titulo = document.createElement('h3');
-    titulo.textContent = 'Contas do mês';
-    header.appendChild(titulo);
-
-    const refresh = document.createElement('button');
-    refresh.type = 'button';
-    refresh.className = 'btn-acao btn-refresh';
-    refresh.textContent = 'Refresh';
-    refresh.addEventListener('click', () => carregarContasMes(filtros));
-    header.appendChild(refresh);
-
-    wrapper.appendChild(header);
-
-    const scroll = document.createElement('div');
-    scroll.className = 'tabela-scroll';
-
-    const tabela = document.createElement('table');
-    tabela.className = 'tabela-contas-mes';
-
-    const thead = document.createElement('thead');
-    const headerRow = document.createElement('tr');
-    [
-      'Nome',
-      'Categoria',
-      'PF/PJ',
-      'Valor Previsto',
-      'Valor Real',
-      'Vencimento',
-      'Pagamento',
-      'Status',
-      'Método',
-      'Origem',
-      'Observações',
-      'Ações',
-    ].forEach((tituloColuna) => {
-      const th = document.createElement('th');
-      th.textContent = tituloColuna;
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    tabela.appendChild(thead);
-
-    const tbody = document.createElement('tbody');
-
-    lista.forEach((conta) => {
-      const tr = document.createElement('tr');
-      const estadoTemporal = obterEstadoTemporal(conta);
-      if (ROW_STATE_CLASSES[estadoTemporal]) {
-        tr.classList.add(ROW_STATE_CLASSES[estadoTemporal]);
-      }
-
-      tr.appendChild(criarCelula(conta.nome || conta.NOME_CONTA));
-      tr.appendChild(criarCelula(conta.categoria || conta.CATEGORIA));
-      tr.appendChild(criarCelula(conta.tipo || conta.TIPO_PESSOA || conta.tipoPessoa));
-      tr.appendChild(criarCelula(formatCurrency(conta.valorPrevisto || conta.VALOR_PREVISTO)));
-      tr.appendChild(criarCelula(formatCurrency(conta.valorReal || conta.VALOR_REAL)));
-      tr.appendChild(criarCelula(conta.vencimento || conta.VENCIMENTO));
-      tr.appendChild(criarCelula(conta.pagamento || conta.DATA_PAGAMENTO));
-
-      const statusTd = document.createElement('td');
-      statusTd.appendChild(criarBadgeStatus(conta));
-      tr.appendChild(statusTd);
-
-      tr.appendChild(criarCelula(conta.metodo || conta.METODO_PAGAMENTO));
-      tr.appendChild(criarCelula(conta.origem || conta.ORIGEM));
-      tr.appendChild(criarCelula(conta.observacoes || conta.OBSERVACOES));
-
-      const acoesTd = document.createElement('td');
-      const acoes = document.createElement('div');
-      acoes.className = 'acoes-conta';
-
-      const btnPago = document.createElement('button');
-      btnPago.type = 'button';
-      btnPago.className = 'btn-acao btn-marcar-pago';
-      btnPago.textContent = 'Marcar Pago';
-      btnPago.addEventListener('click', () => {
-        if (typeof marcarPago === 'function') {
-          marcarPago(conta);
-        } else {
-          alert('Função de marcar pago ainda não implementada.');
-        }
-      });
-      acoes.appendChild(btnPago);
-
-      const btnEditar = document.createElement('button');
-      btnEditar.type = 'button';
-      btnEditar.className = 'btn-acao btn-editar';
-      btnEditar.textContent = 'Editar';
-      btnEditar.addEventListener('click', () => {
-        if (typeof editarConta === 'function') {
-          editarConta(conta);
-        } else {
-          alert('Função de edição ainda não implementada.');
-        }
-      });
-      acoes.appendChild(btnEditar);
-
-      const iconeStatus = document.createElement('span');
-      iconeStatus.className = 'mini-icone-status';
-      iconeStatus.textContent =
-        estadoTemporal === 'pago' ? '✅' : estadoTemporal === 'atrasado' ? '⚠️' : estadoTemporal === 'vencendo' ? '⏰' : '•';
-      acoes.appendChild(iconeStatus);
-
-      acoesTd.appendChild(acoes);
-      tr.appendChild(acoesTd);
-
-      tbody.appendChild(tr);
-    });
-
-    if (!lista.length) {
-      const vazio = document.createElement('tr');
-      const td = document.createElement('td');
-      td.colSpan = 12;
-      td.textContent = 'Nenhuma conta encontrada para os filtros selecionados.';
-      vazio.appendChild(td);
-      tbody.appendChild(vazio);
-    }
-
-    tabela.appendChild(tbody);
-    scroll.appendChild(tabela);
-    wrapper.appendChild(scroll);
-  }
-
-  function carregarContasMes(filtros = {}) {
-    const wrapper = document.getElementById('contasMesWrapper');
-    if (wrapper) {
-      wrapper.setAttribute('aria-busy', 'true');
-    }
-
-    const handleDados = (dados) => {
-      renderTabelaContasMes(Array.isArray(dados) ? dados : [], filtros);
-      if (wrapper) wrapper.removeAttribute('aria-busy');
-    };
-
-    const handleErro = (erro) => {
-      console.error('Erro ao carregar contas do mês', erro);
-      if (wrapper) wrapper.removeAttribute('aria-busy');
-      alert('Não foi possível carregar as contas do mês. Tente novamente.');
-    };
-
-    try {
-      if (typeof google !== 'undefined' && google.script && google.script.run) {
-        google.script.run
-          .withSuccessHandler(handleDados)
-          .withFailureHandler(handleErro)
-          .obterContasMes(filtros);
-        return;
-      }
-    } catch (error) {
-      console.warn('google.script.run não disponível, tentando via fetch.', error);
-    }
-
-    fetch('/api/contas-mes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(filtros),
-    })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res.statusText)))
-      .then(handleDados)
-      .catch(handleErro);
-  }
-
-  // Expondo para o escopo global do Apps Script/HTML Service
-  window.renderTabelaContasMes = renderTabelaContasMes;
-  window.carregarContasMes = carregarContasMes;
-</script>
+<!-- Tabela de Contas do Mês. Renderização e chamadas estão em webapp/app.js -->
+<section class="card" id="contas-mes-card">
+  <div class="card-header row-between">
+    <div>
+      <h2>Contas do mês</h2>
+      <p class="muted">Visão consolidada com filtros, pagamento rápido e geração do mês.</p>
+    </div>
+    <div class="inline-actions">
+      <button type="button" class="btn" data-action="gerar-mes">Gerar mês agora</button>
+      <button type="button" class="btn btn-secondary" data-action="atualizar-contas-mes">Atualizar lista</button>
+    </div>
+  </div>
+
+  <form id="filtros-contas-mes" class="filters-grid">
+    <div class="form-field">
+      <label for="filtroStatus">Status</label>
+      <select id="filtroStatus" name="status">
+        <option value="">Todos</option>
+        <option value="PENDENTE">Em aberto</option>
+        <option value="PAGO">Pago</option>
+        <option value="ATRASADO">Atrasado</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="filtroTipoPessoa">Tipo de pessoa</label>
+      <select id="filtroTipoPessoa" name="tipoPessoa">
+        <option value="">PF e PJ</option>
+        <option value="PF">PF</option>
+        <option value="PJ">PJ</option>
+      </select>
+    </div>
+    <div class="form-field">
+      <label for="filtroVencInicio">Vencimento inicial</label>
+      <input type="date" id="filtroVencInicio" name="vencimentoInicio" />
+    </div>
+    <div class="form-field">
+      <label for="filtroVencFim">Vencimento final</label>
+      <input type="date" id="filtroVencFim" name="vencimentoFim" />
+    </div>
+    <div class="form-actions full-row">
+      <button type="submit" class="btn btn-primary">Aplicar filtros</button>
+    </div>
+  </form>
+
+  <div id="tabela-contas-mes" class="tabela-scroll" data-contas-mes></div>
+</section>

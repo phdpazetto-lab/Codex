@@ -1,277 +1,442 @@
-// Core application state and routing for the StarPay WebApp.
+// StarPay WebApp controller: routing, GAS calls, rendering and forms.
 
-// Global state controlling filters, datasets and current navigation context.
 const state = {
-  currentSection: 'contas-mes',
+  currentSection: 'dashboard',
   filtros: {
-    categoria: 'todas',
-    tipoPessoa: 'todas',
-    statusPagamento: 'todas',
+    status: '',
+    tipoPessoa: '',
+    vencimentoInicio: '',
+    vencimentoFim: '',
   },
   datasets: {
     contasFixas: [],
-    contasPontuais: [],
     contasMes: [],
   },
 };
 
 const SELECTORS = {
-  section: '[data-section]',
-  sectionTrigger: '[data-section-target]',
   navLink: '.nav-link',
   pageSection: '.page-section',
+  contasFixasLista: '#lista-contas-fixas',
+  contasMesTabela: '#tabela-contas-mes',
   toastContainer: '#toast-container',
-  contasMes: '[data-contas-mes]',
 };
 
-// --- GAS client helpers ---
-/**
- * Generic wrapper around google.script.run that centralizes loading and error handling.
- * @param {string} fn - Apps Script function name.
- * @param {*} payload - Payload forwarded to the server.
- * @param {Function} [onSuccess] - Callback executed on success.
- * @param {Function} [onError] - Callback executed on failure.
- */
-function callServer(fn, payload = {}, onSuccess, onError) {
-  const runner = (typeof google !== 'undefined' && google.script && google.script.run) || null;
-  if (!runner || typeof runner[fn] !== 'function') {
-    const message = `Função de servidor indisponível: ${fn}`;
-    console.error(message);
-    if (typeof onError === 'function') onError(message);
-    else showError(message);
-    return;
-  }
-
-  setLoading(true);
-  clearError();
-
-  runner
-    .withSuccessHandler((response) => {
-      setLoading(false);
-      if (typeof onSuccess === 'function') onSuccess(response);
-    })
-    .withFailureHandler((error) => {
-      console.error('Erro ao chamar servidor:', error);
-      setLoading(false);
-      if (typeof onError === 'function') onError(error);
-      else showError(error);
-    })[fn](payload);
-}
-
-const gasClient = {
-  callServer,
-  listarContasFixas: (payload, onSuccess, onError) =>
-    callServer('listarContasFixas', payload, onSuccess, onError),
-  criarContaFixa: (payload, onSuccess, onError) =>
-    callServer('criarContaFixa', payload, onSuccess, onError),
-  criarContaPontual: (payload, onSuccess, onError) =>
-    callServer('criarContaPontual', payload, onSuccess, onError),
-  listarContasMes: (payload, onSuccess, onError) =>
-    callServer('listarContasMes', payload, onSuccess, onError),
-  marcarPago: (payload, onSuccess, onError) => callServer('marcarPago', payload, onSuccess, onError),
-  gerarMes: (payload, onSuccess, onError) => callServer('gerarMes', payload, onSuccess, onError),
-  processarLembretes: (payload, onSuccess, onError) =>
-    callServer('processarLembretes', payload, onSuccess, onError),
-};
-
-// --- UI helpers ---
-function setLoading(isLoading) {
-  const loader = document.querySelector('[data-loader]');
-  if (!loader) return;
-  loader.style.display = isLoading ? 'flex' : 'none';
-}
-
-function showError(error) {
-  const message = typeof error === 'string' ? error : error?.message || 'Erro inesperado';
-  const alertBox = document.querySelector('[data-alert]');
-  if (alertBox) {
-    alertBox.textContent = message;
-    alertBox.classList.add('is-visible');
-  } else {
-    alert(message);
-  }
-}
-
-function clearError() {
-  const alertBox = document.querySelector('[data-alert]');
-  if (alertBox) alertBox.classList.remove('is-visible');
-}
-
-// Toast helpers (optional, used by nav links)
-function createToast(message, variant = 'info', duration = 3000) {
-  const toastContainer = document.querySelector(SELECTORS.toastContainer);
-  if (!toastContainer) return;
+function showToast(message, variant = 'info', duration = 3000) {
+  const container = document.querySelector(SELECTORS.toastContainer);
+  if (!container) return;
 
   const toast = document.createElement('div');
   toast.className = `toast ${variant}`;
   toast.textContent = message;
-  toastContainer.appendChild(toast);
+  container.appendChild(toast);
 
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(6px)';
-    setTimeout(() => toast.remove(), 200);
+    setTimeout(() => toast.remove(), 180);
   }, duration);
 }
 
-// --- Routing ---
+function callServer(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    const runner = (typeof google !== 'undefined' && google.script && google.script.run) || null;
+    if (!runner || typeof runner[fn] !== 'function') {
+      const message = `Função de servidor indisponível: ${fn}`;
+      console.warn(message);
+      reject(new Error(message));
+      return;
+    }
+
+    runner.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+  });
+}
+
+const gasClient = {
+  listarContasFixas: () => callServer('listarContasFixas'),
+  criarContaFixa: (payload) => callServer('criarContaFixa', payload),
+  criarContaPontual: (payload) => callServer('criarContaPontual', payload),
+  listarContasMes: (payload) => callServer('listarContasMes', payload),
+  marcarPago: (id, dataPagamento, valorReal, metodo, observacoes) =>
+    callServer('marcarPago', id, dataPagamento, valorReal, metodo, observacoes),
+  gerarMes: () => callServer('gerarMes'),
+};
+
 function setupRouting() {
-  window.addEventListener('hashchange', handleRouteChange);
-  document.querySelectorAll(SELECTORS.sectionTrigger).forEach((button) => {
-    button.addEventListener('click', () => {
-      const target = button.getAttribute('data-section-target');
-      if (target) window.location.hash = `#${target}`;
-    });
-  });
-
   document.querySelectorAll(SELECTORS.navLink).forEach((link) => {
-    link.addEventListener('click', (event) => {
-      const targetId = link.dataset.section;
-      if (targetId) {
-        event.preventDefault();
-        window.location.hash = `#${targetId}`;
-        createToast(`Você está em: ${link.textContent}`, 'info', 1500);
-      }
+    link.addEventListener('click', () => {
+      const target = link.dataset.section;
+      updateActiveSection(target);
+      window.location.hash = `#${target}`;
     });
   });
 
-  // Fallback: ensure the first section is visible if none are marked active
-  handleRouteChange();
-  ensureInitialSection();
-}
-
-function handleRouteChange() {
-  const section = window.location.hash.replace('#', '') || state.currentSection;
-  state.currentSection = section;
-  updateActiveSection(section);
-}
-
-function ensureInitialSection() {
-  const sections = Array.from(document.querySelectorAll(SELECTORS.pageSection));
-  if (!sections.some((section) => section.classList.contains('active') || section.classList.contains('is-active'))) {
-    const firstSection = sections[0];
-    if (firstSection) updateActiveSection(firstSection.id || firstSection.dataset.section || 'dashboard');
-  }
+  const initialHash = window.location.hash.replace('#', '');
+  updateActiveSection(initialHash || state.currentSection);
 }
 
 function updateActiveSection(sectionId) {
-  document.querySelectorAll(SELECTORS.section).forEach((element) => {
-    const isActive = element.getAttribute('data-section') === sectionId;
-    element.classList.toggle('is-active', isActive);
-    element.classList.toggle('active', isActive);
-  });
-
-  document.querySelectorAll(SELECTORS.pageSection).forEach((element) => {
-    const isActive = element.id === sectionId;
-    element.classList.toggle('active', isActive);
-  });
-
-  document.querySelectorAll(SELECTORS.sectionTrigger).forEach((button) => {
-    const isActive = button.getAttribute('data-section-target') === sectionId;
-    button.classList.toggle('is-active', isActive);
-  });
-
+  state.currentSection = sectionId || 'dashboard';
   document.querySelectorAll(SELECTORS.navLink).forEach((link) => {
-    const isActive = link.dataset.section === sectionId;
+    const isActive = link.dataset.section === state.currentSection;
     link.classList.toggle('active', isActive);
-    if (isActive) {
-      link.setAttribute('aria-current', 'page');
-    } else {
-      link.removeAttribute('aria-current');
-    }
+    if (isActive) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+
+  document.querySelectorAll(SELECTORS.pageSection).forEach((section) => {
+    const isActive = section.id === state.currentSection;
+    section.classList.toggle('active', isActive);
   });
 }
 
-// --- Data loading ---
-function carregarContasMes() {
-  clearError();
-  const filtros = { ...state.filtros };
-  gasClient.listarContasMes(
-    filtros,
-    (data) => {
-      state.datasets.contasMes = Array.isArray(data) ? data : [];
-      renderContasMes();
-    },
-    showError
-  );
+function formatCurrency(value) {
+  const number = Number(value || 0);
+  return number.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function renderContasMes() {
-  const container = document.querySelector(SELECTORS.contasMes);
-  if (!container) return;
-  container.innerHTML = '';
+function formatDate(value) {
+  if (!value) return '—';
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('pt-BR');
+}
 
-  if (!state.datasets.contasMes.length) {
-    container.innerHTML = '<p class="muted">Nenhuma conta encontrada para os filtros aplicados.</p>';
+function renderContasFixas() {
+  const container = document.querySelector(SELECTORS.contasFixasLista);
+  if (!container) return;
+
+  if (!state.datasets.contasFixas.length) {
+    container.innerHTML = '<p class="muted">Nenhuma conta fixa cadastrada ainda.</p>';
     return;
   }
 
-  const list = document.createElement('ul');
-  list.className = 'contas-lista';
+  const table = document.createElement('table');
+  table.className = 'list-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Categoria</th>
+        <th>PF/PJ</th>
+        <th>Valor</th>
+        <th>Dia</th>
+        <th>Pagamento</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
 
-  state.datasets.contasMes.forEach((conta) => {
-    const item = document.createElement('li');
-    item.className = 'conta-linha';
-    item.innerHTML = `
-      <div class="conta-col nome">${conta.nomeConta || conta.nome || 'Conta'}</div>
-      <div class="conta-col vencimento">${conta.vencimento || '--'}</div>
-      <div class="conta-col valor">${conta.valorPrevisto || conta.valor || 0}</div>
-      <div class="conta-col status">${conta.pago ? 'Pago' : 'Em aberto'}</div>
+  const tbody = table.querySelector('tbody');
+  state.datasets.contasFixas.forEach((conta) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${conta.nome_conta || conta.nomeConta}</td>
+      <td>${conta.categoria}</td>
+      <td>${conta.tipo_pessoa || conta.tipoPessoa}</td>
+      <td>${formatCurrency(conta.valor_previsto || conta.valorPrevisto)}</td>
+      <td>${conta.dia_recorrecia || conta.diaRecorrencia}</td>
+      <td>${conta.metodo_pagamento || conta.metodoPagamento || '—'}</td>
     `;
-    list.appendChild(item);
+    tbody.appendChild(tr);
   });
 
-  container.appendChild(list);
+  container.innerHTML = '';
+  container.appendChild(table);
 }
 
-// --- Initialization ---
+function statusBadge(conta) {
+  const pago = String(conta.PAGO || conta.pago || '').toUpperCase() === 'SIM';
+  const atrasado = String(conta.ATRASADO || conta.atrasado || '').toUpperCase() === 'SIM';
+  const span = document.createElement('span');
+  let classe = 'status-badge--em-aberto';
+  let label = 'Em aberto';
+  if (pago) {
+    classe = 'status-badge--pago';
+    label = 'Pago';
+  } else if (atrasado) {
+    classe = 'status-badge--atrasado';
+    label = 'Atrasado';
+  }
+  span.className = `status-badge ${classe}`;
+  span.textContent = label;
+  return span;
+}
+
+function linhaEstadoClass(conta) {
+  const pago = String(conta.PAGO || conta.pago || '').toUpperCase() === 'SIM';
+  if (pago) return 'linha-pago';
+  const vencimento = conta.VENCIMENTO || conta.vencimento;
+  const data = vencimento ? new Date(vencimento) : null;
+  if (data && !Number.isNaN(data.getTime())) {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    const diff = (data - hoje) / (1000 * 60 * 60 * 24);
+    if (diff < 0) return 'linha-atrasado';
+    if (diff <= 3) return 'linha-vencendo';
+  }
+  return '';
+}
+
+function renderContasMes() {
+  const container = document.querySelector(SELECTORS.contasMesTabela);
+  if (!container) return;
+
+  const lista = state.datasets.contasMes;
+  if (!lista.length) {
+    container.innerHTML = '<p class="muted">Nenhuma conta encontrada para os filtros.</p>';
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'tabela-contas-mes';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Nome</th>
+        <th>Categoria</th>
+        <th>PF/PJ</th>
+        <th>Valor Previsto</th>
+        <th>Valor Real</th>
+        <th>Vencimento</th>
+        <th>Pagamento</th>
+        <th>Status</th>
+        <th>Método</th>
+        <th>Origem</th>
+        <th>Observações</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+  const tbody = table.querySelector('tbody');
+  lista.forEach((conta) => {
+    const tr = document.createElement('tr');
+    const linhaClass = linhaEstadoClass(conta);
+    if (linhaClass) tr.classList.add(linhaClass);
+
+    const idMensal = conta.ID_MENSAL || conta.id_mensal || conta.idMensal;
+
+    tr.innerHTML = `
+      <td>${conta.NOME_CONTA || conta.nomeConta}</td>
+      <td>${conta.CATEGORIA || conta.categoria || '—'}</td>
+      <td>${conta.TIPO_PESSOA || conta.tipoPessoa || '—'}</td>
+      <td>${formatCurrency(conta.VALOR_PREVISTO || conta.valorPrevisto)}</td>
+      <td>${formatCurrency(conta.VALOR_REAL || conta.valorReal)}</td>
+      <td>${formatDate(conta.VENCIMENTO || conta.vencimento)}</td>
+      <td>${formatDate(conta.DATA_PAGAMENTO || conta.dataPagamento)}</td>
+      <td class="status-cell"></td>
+      <td>${conta.METODO_PAGAMENTO || conta.metodoPagamento || '—'}</td>
+      <td>${conta.ORIGEM || conta.origem || '—'}</td>
+      <td>${conta.OBSERVACOES || conta.observacoes || '—'}</td>
+      <td class="acoes-conta"></td>
+    `;
+
+    const statusTd = tr.querySelector('.status-cell');
+    statusTd.appendChild(statusBadge(conta));
+
+    const actionsTd = tr.querySelector('.acoes-conta');
+    const btnPago = document.createElement('button');
+    btnPago.type = 'button';
+    btnPago.className = 'btn btn-primary';
+    btnPago.textContent = 'Marcar pago';
+    btnPago.addEventListener('click', () => promptPagamento(idMensal, conta));
+    actionsTd.appendChild(btnPago);
+
+    tbody.appendChild(tr);
+  });
+
+  container.innerHTML = '';
+  container.appendChild(table);
+}
+
+function promptPagamento(id, conta) {
+  if (!id) {
+    showToast('ID da conta não encontrado.', 'error');
+    return;
+  }
+  const valorDefault = conta.VALOR_REAL || conta.valorReal || conta.VALOR_PREVISTO || conta.valorPrevisto || '';
+  const valorReal = window.prompt('Valor pago (opcional)', valorDefault);
+  const metodo = window.prompt('Método de pagamento (opcional)', conta.METODO_PAGAMENTO || conta.metodoPagamento || '');
+  const observacoes = window.prompt('Observações (opcional)', conta.OBSERVACOES || conta.observacoes || '');
+
+  gasClient
+    .marcarPago(id, new Date(), valorReal ? Number(valorReal) : undefined, metodo, observacoes)
+    .then(() => {
+      showToast('Pagamento registrado com sucesso.', 'success');
+      carregarContasMes();
+    })
+    .catch((error) => {
+      console.error(error);
+      showToast('Falha ao marcar pagamento.', 'error');
+    });
+}
+
+function obterFiltrosForm() {
+  const form = document.getElementById('filtros-contas-mes');
+  if (!form) return { ...state.filtros };
+  return {
+    status: form.status.value,
+    tipoPessoa: form.tipoPessoa.value,
+    vencimentoInicio: form.vencimentoInicio.value,
+    vencimentoFim: form.vencimentoFim.value,
+  };
+}
+
+function carregarContasFixas() {
+  gasClient
+    .listarContasFixas()
+    .then((dados) => {
+      state.datasets.contasFixas = Array.isArray(dados) ? dados : [];
+      renderContasFixas();
+    })
+    .catch((error) => {
+      console.error(error);
+      showToast('Erro ao carregar contas fixas.', 'error');
+    });
+}
+
+function carregarContasMes() {
+  const filtros = obterFiltrosForm();
+  state.filtros = filtros;
+  gasClient
+    .listarContasMes(filtros)
+    .then((dados) => {
+      state.datasets.contasMes = Array.isArray(dados) ? dados : [];
+      renderContasMes();
+    })
+    .catch((error) => {
+      console.error(error);
+      showToast('Erro ao carregar contas do mês.', 'error');
+    });
+}
+
+function validarNumero(valor) {
+  const numero = Number(valor);
+  return Number.isFinite(numero) && numero >= 0;
+}
+
+function handleContaFixaSubmit(event) {
+  event.preventDefault();
+  const form = event.target;
+
+  const payload = {
+    nomeConta: form.nomeConta.value.trim(),
+    categoria: form.categoria.value.trim(),
+    tipoPessoa: form.tipoPessoa.value,
+    valorPrevisto: Number(form.valorPrevisto.value),
+    diaRecorrencia: Number(form.diaRecorrencia.value),
+    metodoPagamento: form.metodoPagamento.value.trim(),
+    observacoes: form.observacoes.value.trim(),
+  };
+
+  if (!payload.nomeConta || !payload.categoria || !payload.tipoPessoa) {
+    showToast('Preencha todos os campos obrigatórios.', 'error');
+    return;
+  }
+  if (!validarNumero(payload.valorPrevisto)) {
+    showToast('Valor previsto inválido.', 'error');
+    return;
+  }
+  if (!Number.isInteger(payload.diaRecorrencia) || payload.diaRecorrencia < 1 || payload.diaRecorrencia > 28) {
+    showToast('Dia de recorrência deve ficar entre 1 e 28.', 'error');
+    return;
+  }
+
+  gasClient
+    .criarContaFixa(payload)
+    .then(() => {
+      showToast('Conta fixa cadastrada.', 'success');
+      form.reset();
+      carregarContasFixas();
+    })
+    .catch((error) => {
+      console.error(error);
+      showToast('Erro ao cadastrar conta fixa.', 'error');
+    });
+}
+
+function handleContaPontualSubmit(event) {
+  event.preventDefault();
+  const form = event.target;
+
+  const payload = {
+    nomeConta: form.nomeConta.value.trim(),
+    categoria: form.categoria.value.trim(),
+    tipoPessoa: form.tipoPessoa.value,
+    valorPrevisto: Number(form.valorPrevisto.value),
+    vencimento: form.vencimento.value,
+    metodoPagamento: form.metodoPagamento.value.trim(),
+    observacoes: form.observacoes.value.trim(),
+  };
+
+  if (!payload.nomeConta || !payload.categoria || !payload.tipoPessoa || !payload.vencimento) {
+    showToast('Preencha todos os campos obrigatórios.', 'error');
+    return;
+  }
+  if (!validarNumero(payload.valorPrevisto)) {
+    showToast('Valor previsto inválido.', 'error');
+    return;
+  }
+
+  gasClient
+    .criarContaPontual(payload)
+    .then(() => {
+      showToast('Conta pontual criada em Contas do Mês.', 'success');
+      form.reset();
+      carregarContasMes();
+    })
+    .catch((error) => {
+      console.error(error);
+      showToast('Erro ao cadastrar conta pontual.', 'error');
+    });
+}
+
+function setupForms() {
+  const formContaFixa = document.getElementById('form-conta-fixa');
+  const formContaPontual = document.getElementById('form-conta-pontual');
+  const filtrosForm = document.getElementById('filtros-contas-mes');
+
+  formContaFixa?.addEventListener('submit', handleContaFixaSubmit);
+  formContaPontual?.addEventListener('submit', handleContaPontualSubmit);
+  filtrosForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    carregarContasMes();
+  });
+}
+
+function setupActions() {
+  const gerarMesBtn = document.querySelector('[data-action="gerar-mes"]');
+  const refreshMesBtn = document.querySelector('[data-action="atualizar-contas-mes"]');
+
+  gerarMesBtn?.addEventListener('click', () => {
+    gasClient
+      .gerarMes()
+      .then(() => {
+        showToast('Mês gerado com sucesso.', 'success');
+        carregarContasMes();
+      })
+      .catch((error) => {
+        console.error(error);
+        showToast('Falha ao gerar mês.', 'error');
+      });
+  });
+
+  refreshMesBtn?.addEventListener('click', () => carregarContasMes());
+}
+
 function initApp() {
   setupRouting();
+  setupForms();
+  setupActions();
+  carregarContasFixas();
   carregarContasMes();
 }
 
 document.addEventListener('DOMContentLoaded', initApp);
 
-// Expose helpers for other modules or inline scripts.
 window.gasClient = gasClient;
 window.state = state;
-window.callServer = callServer;
-// Entry point for the StarPay WebApp UI.
-// Use ES module exports for shared utilities as the WebApp grows.
-
-const state = {
-  initialized: false,
-};
-
-function renderWelcome() {
-  const container = document.getElementById('main-content');
-  if (!container) return;
-
-  container.innerHTML = `
-    <h2>Welcome</h2>
-    <p class="section-description">
-      Use this shell to connect the WebApp to your Google Apps Script backend and Sheets data.
-      Replace this card with navigation, forms, and dashboards tailored to the StarPay spec.
-    </p>
-    <button class="button-primary" id="load-data">Load sample data</button>
-  `;
-
-  const button = document.getElementById('load-data');
-  button?.addEventListener('click', handleLoadSampleData);
-}
-
-function handleLoadSampleData() {
-  // Placeholder for future google.script.run calls.
-  console.info('Sample action triggered. Wire this up to Apps Script methods.');
-}
-
-function init() {
-  if (state.initialized) return;
-  renderWelcome();
-  state.initialized = true;
-}
-
-// Initialize immediately for static hosting; Apps Script can also call init() after load.
-init();
-
-export { init };
+window.carregarContasMes = carregarContasMes;
+window.carregarContasFixas = carregarContasFixas;

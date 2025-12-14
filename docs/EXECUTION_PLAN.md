@@ -3,13 +3,10 @@
 ## Status atual
 - **Backend (Apps Script)**: O motor mensal já cria a aba `CONTAS_MENSAL` para o mês de referência, reaproveitando contas variáveis existentes, clonando contas fixas ativas e recalculando atrasos, além de permitir inclusão pontual de contas mensais. 【F:apps-script/motorMensal.gs†L1-L178】
 - **Triggers/automação**: Existe um helper documentado para recriar automaticamente os triggers de geração mensal e notificações diárias com base no horário configurado na aba `CONFIG`. 【F:apps-script/README.md†L1-L54】
-- **Frontend atual**: O `app.js` implementa roteamento básico, carregamento de "Contas do Mês" via `listarContasMes` e renderiza uma lista simples; porém termina com um segundo stub de estado/inicialização que duplica a definição de `state`. 【F:webapp/app.js†L4-L238】【F:webapp/app.js†L242-L277】
+- **Frontend atual**: `index.html` foi consolidado (sem HTML duplicado), os formulários de contas fixas e pontuais foram centralizados em `app.js` e estão conectados às funções `criarContaFixa` e `criarContaPontual`, e a tabela de Contas do Mês agora usa `listarContasMes`, `marcarPago` e o gatilho de `gerarMes` diretamente. 【F:webapp/index.html†L1-L88】【F:webapp/app.js†L1-L216】
 - **Referência de produto**: O README geral descreve o escopo completo: cadastros de contas fixas e pontuais, geração automática mensal, lembretes por e-mail, UI corporativa e dashboard financeiro. 【F:README.md†L26-L150】
 
 ## Pendências imediatas
-- Consolidar o frontend removendo o stub duplicado e alinhando o estado/rotas a um único ponto de verdade, garantindo que carregamento e toasts funcionem de forma consistente. 【F:webapp/app.js†L4-L238】【F:webapp/app.js†L242-L277】
-- Implementar formulários e chamadas de Apps Script para **Cadastrar Conta Fixa** e **Cadastrar Conta Pontual**, que hoje não existem no `app.js`, apesar de serem requisitos centrais do produto. 【F:README.md†L30-L119】
-- Completar a UI da tela **Contas do Mês** com tabela profissional (filtros, ações de pagar/editar) e sincronizar com o backend existente em `motorMensal.gs`. 【F:webapp/app.js†L185-L225】【F:README.md†L143-L149】【F:apps-script/motorMensal.gs†L82-L178】
 - Integrar e validar o fluxo de notificações (configuração de horários, e-mails e modos antes/no/apos vencimento) aproveitando o helper de triggers. 【F:apps-script/README.md†L1-L54】【F:README.md†L30-L35】
 - Iniciar o dashboard financeiro (KPIs, gráficos, status legendados) ainda ausente na UI. 【F:README.md†L133-L150】
 
