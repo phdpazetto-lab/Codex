@@ -5,6 +5,31 @@
 
 const CONTAS_MENSAL_SHEET = 'CONTAS_MENSAL';
 
+// Normalização de cabeçalhos para suportar variações como "PAGO (SIM/NÃO)" ou
+// "VENCIMENTO (data)" mantendo chaves canônicas no código.
+const CONTAS_MENSAL_HEADER_ALIASES = {
+  IDMENSAL: 'ID_MENSAL',
+  ID_CONTA_ORIGEM: 'ID_CONTA_ORIGEM',
+  IDCONTAORIGEM: 'ID_CONTA_ORIGEM',
+  NOMECONTA: 'NOME_CONTA',
+  CATEGORIA: 'CATEGORIA',
+  TIPOPESSOA: 'TIPO_PESSOA',
+  VALORPREVISTO: 'VALOR_PREVISTO',
+  VALORREAL: 'VALOR_REAL',
+  VENCIMENTO: 'VENCIMENTO',
+  VENCIMENTODATA: 'VENCIMENTO',
+  DATAPAGAMENTO: 'DATA_PAGAMENTO',
+  PAGO: 'PAGO',
+  PAGOSIMNAO: 'PAGO',
+  ATRASADO: 'ATRASADO',
+  ATRASADOSIMNAO: 'ATRASADO',
+  METODOPAGAMENTO: 'METODO_PAGAMENTO',
+  ORIGEM: 'ORIGEM',
+  ORIGEMFIXAVARIAVEL: 'ORIGEM',
+  NOTIFICACAOENVIADA: 'NOTIFICACAO_ENVIADA',
+  OBSERVACOES: 'OBSERVACOES'
+};
+
 /**
  * Obtém a planilha de contas do mês.
  * @returns {GoogleAppsScript.Spreadsheet.Sheet}
@@ -23,14 +48,27 @@ function getContasMensalSheet() {
  * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
  * @returns {Object<string, number>}
  */
+function normalizeHeaderKey(name) {
+  if (!name) return '';
+  const normalized = String(name)
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^A-Z0-9]/gi, '')
+    .toUpperCase();
+  return CONTAS_MENSAL_HEADER_ALIASES[normalized] || normalized;
+}
+
 function getHeaderMap(sheet) {
   const header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const map = {};
+
   header.forEach((name, idx) => {
-    if (name) {
-      map[String(name).trim()] = idx;
+    const key = normalizeHeaderKey(name);
+    if (key) {
+      map[key] = idx;
     }
   });
+
   return map;
 }
 
@@ -40,8 +78,12 @@ function getHeaderMap(sheet) {
  * @returns {string}
  */
 function toSimNao(value) {
-  if (value === true || String(value).toUpperCase() === 'SIM') return 'SIM';
-  return 'NÃO';
+  const normalized = String(value || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toUpperCase();
+  if (normalized === 'SIM') return 'SIM';
+  return 'NAO';
 }
 
 /**
@@ -66,16 +108,16 @@ function normalizeDate(date) {
 function calcularAtraso(vencimento, pagoSimNao, dataPagamento) {
   const venc = normalizeDate(vencimento);
   const pagamento = normalizeDate(dataPagamento);
-  if (!venc) return 'NÃO';
+  if (!venc) return 'NAO';
 
   const pago = toSimNao(pagoSimNao) === 'SIM';
   if (pago) {
     if (pagamento && pagamento > venc) return 'SIM';
-    return 'NÃO';
+    return 'NAO';
   }
 
   const hoje = normalizeDate(new Date());
-  return hoje > venc ? 'SIM' : 'NÃO';
+  return hoje > venc ? 'SIM' : 'NAO';
 }
 
 /**
@@ -91,7 +133,6 @@ function calcularAtraso(vencimento, pagoSimNao, dataPagamento) {
 function listarContasMes(filtros) {
   const sheet = getContasMensalSheet();
   const headerMap = getHeaderMap(sheet);
-  const header = Object.keys(headerMap);
   const data = sheet.getDataRange().getValues();
   const rows = data.slice(1); // ignora cabeçalho
 
@@ -106,13 +147,7 @@ function listarContasMes(filtros) {
   const vencFim = filtros ? normalizeDate(filtros.vencimentoFim) : null;
 
   return rows
-    .map((row) => {
-      const obj = {};
-      header.forEach((colName, idx) => {
-        obj[colName] = row[idx];
-      });
-      return obj;
-    })
+    .map((row) => mapRowToObject(row, headerMap))
     .filter((row) => {
       // Atualiza campo ATRASADO em memória para refletir a regra atual.
       const atrasado = calcularAtraso(row.VENCIMENTO, row.PAGO, row.DATA_PAGAMENTO);
@@ -146,7 +181,6 @@ function marcarPago(id, dataPagamento, valorReal, metodo, observacoes) {
   const sheet = getContasMensalSheet();
   const headerMap = getHeaderMap(sheet);
   const data = sheet.getDataRange().getValues();
-  const header = data[0];
 
   const targetIdx = data.findIndex((row, idx) => idx > 0 && String(row[headerMap.ID_MENSAL]) === String(id));
   if (targetIdx === -1) {
@@ -163,13 +197,9 @@ function marcarPago(id, dataPagamento, valorReal, metodo, observacoes) {
   row[headerMap.ATRASADO] = calcularAtraso(row[headerMap.VENCIMENTO], row[headerMap.PAGO], row[headerMap.DATA_PAGAMENTO]);
   row[headerMap.NOTIFICACAO_ENVIADA] = row[headerMap.NOTIFICACAO_ENVIADA] || 'SIM';
 
-  sheet.getRange(targetIdx + 1, 1, 1, header.length).setValues([row]);
+  sheet.getRange(targetIdx + 1, 1, 1, sheet.getLastColumn()).setValues([row]);
 
-  const updated = {};
-  header.forEach((colName, idx) => {
-    updated[colName] = row[idx];
-  });
-  return updated;
+  return mapRowToObject(row, headerMap);
 }
 
 /**
@@ -187,7 +217,6 @@ function atualizarContaMensal(payload) {
   const sheet = getContasMensalSheet();
   const headerMap = getHeaderMap(sheet);
   const data = sheet.getDataRange().getValues();
-  const header = data[0];
 
   const targetIdx = data.findIndex((row, idx) => idx > 0 && String(row[headerMap.ID_MENSAL]) === String(payload.id));
   if (targetIdx === -1) {
@@ -217,14 +246,18 @@ function atualizarContaMensal(payload) {
   if (payload.notificacaoEnviada !== undefined) {
     row[headerMap.NOTIFICACAO_ENVIADA] = toSimNao(payload.notificacaoEnviada);
   } else if (!row[headerMap.NOTIFICACAO_ENVIADA]) {
-    row[headerMap.NOTIFICACAO_ENVIADA] = 'NÃO';
+    row[headerMap.NOTIFICACAO_ENVIADA] = 'NAO';
   }
 
-  sheet.getRange(targetIdx + 1, 1, 1, header.length).setValues([row]);
+  sheet.getRange(targetIdx + 1, 1, 1, sheet.getLastColumn()).setValues([row]);
 
-  const updated = {};
-  header.forEach((colName, idx) => {
-    updated[colName] = row[idx];
+  return mapRowToObject(row, headerMap);
+}
+
+function mapRowToObject(row, headerMap) {
+  const obj = {};
+  Object.keys(headerMap).forEach((key) => {
+    obj[key] = row[headerMap[key]];
   });
-  return updated;
+  return obj;
 }
