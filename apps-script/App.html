@@ -381,6 +381,8 @@ function carregarContasMes() {
       state.datasets.contasMes = Array.isArray(dados) ? dados : [];
       renderContasMes();
       updateHomeKpis();
+      updateHomeKpis();
+ReadMe
       if (typeof window.renderDashboard === 'function') {
         window.renderDashboard(state.datasets.contasMes);
       }
