@@ -123,6 +123,125 @@ body {
   display: block;
 }
 
+.eyebrow {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.35rem 0;
+}
+
+.home-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.home-hero__text h1 {
+  margin: 0 0 0.25rem 0;
+  font-size: 2rem;
+}
+
+.home-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.home-hero__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.kpi-pill {
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.kpi-pill.warning {
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.kpi-pill__label {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 0.85rem;
+}
+
+.kpi-pill__value {
+  margin: 0.1rem 0 0 0;
+  font-weight: 700;
+  font-size: 1.25rem;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.feature-card {
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
+}
+
+.feature-card:hover,
+.feature-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: #d1d5db;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  outline: none;
+}
+
+.feature-kicker {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.feature-desc {
+  margin: 0.35rem 0 0 0;
+  color: var(--muted);
+}
+
+.feature-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.35);
+}
+
+.feature-icon--fixas {
+  background: linear-gradient(135deg, #10b981, #059669);
+  box-shadow: 0 10px 20px rgba(5, 150, 105, 0.35);
+}
+
+.feature-icon--pontuais {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  box-shadow: 0 10px 20px rgba(217, 119, 6, 0.35);
+}
+
+.feature-icon--mensal {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow: 0 10px 20px rgba(124, 58, 237, 0.35);
+}
+
 .section-header {
   display: flex;
   align-items: center;

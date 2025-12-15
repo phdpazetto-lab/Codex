@@ -2,7 +2,7 @@
 // StarPay WebApp controller: routing, GAS calls, rendering and forms.
 
 const state = {
-  currentSection: 'dashboard',
+  currentSection: 'home',
   filtros: {
     status: '',
     tipoPessoa: '',
@@ -18,6 +18,7 @@ const state = {
 const SELECTORS = {
   navLink: '.nav-link',
   pageSection: '.page-section',
+  featureCard: '[data-section-card]',
   contasFixasLista: '#lista-contas-fixas',
   contasMesTabela: '#tabela-contas-mes',
   toastContainer: '#toast-container',
@@ -76,12 +77,21 @@ function setupRouting() {
     });
   });
 
+  document.querySelectorAll(SELECTORS.featureCard).forEach((card) => {
+    card.addEventListener('click', () => {
+      const target = card.dataset.sectionCard;
+      updateActiveSection(target);
+      window.location.hash = `#${target}`;
+    });
+  });
+
   const initialHash = window.location.hash.replace('#', '');
   updateActiveSection(initialHash || state.currentSection);
 }
 
 function updateActiveSection(sectionId) {
-  state.currentSection = sectionId || 'dashboard';
+  const validSection = sectionId && document.getElementById(sectionId) ? sectionId : 'home';
+  state.currentSection = validSection;
   document.querySelectorAll(SELECTORS.navLink).forEach((link) => {
     const isActive = link.dataset.section === state.currentSection;
     link.classList.toggle('active', isActive);
@@ -93,6 +103,55 @@ function updateActiveSection(sectionId) {
     const isActive = section.id === state.currentSection;
     section.classList.toggle('active', isActive);
   });
+}
+
+function normalizeBoolean(value) {
+  const normalized = String(value || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toUpperCase();
+  return normalized === 'SIM' || normalized === 'YES' || normalized === 'TRUE';
+}
+
+function parseNumeric(value) {
+  if (typeof value === 'number') return value;
+  if (value === null || value === undefined) return 0;
+  const sanitized = String(value).replace(/[^0-9,.-]/g, '').replace(',', '.');
+  const parsed = Number.parseFloat(sanitized);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function updateHomeKpis() {
+  const totalPrevistoEl = document.getElementById('kpi-previsto');
+  const totalPagoEl = document.getElementById('kpi-pago');
+  const totalAbertoEl = document.getElementById('kpi-em-aberto');
+  const totalAtrasadoEl = document.getElementById('kpi-atrasado');
+
+  if (!totalPrevistoEl) return;
+
+  const resumo = state.datasets.contasMes.reduce(
+    (acc, item) => {
+      const valorPrevisto = parseNumeric(item.VALOR_PREVISTO || item.valor_previsto || item.valorPrevisto);
+      const valorReal = parseNumeric(item.VALOR_REAL || item.valorReal);
+      const pago = normalizeBoolean(item.PAGO || item.pago);
+      const atrasado = normalizeBoolean(item.ATRASADO || item.atrasado);
+
+      acc.previsto += valorPrevisto;
+      if (pago) {
+        acc.pago += valorReal || valorPrevisto;
+      } else {
+        acc.emAberto += valorPrevisto;
+      }
+      if (atrasado && !pago) acc.atrasados += 1;
+      return acc;
+    },
+    { previsto: 0, pago: 0, emAberto: 0, atrasados: 0 }
+  );
+
+  totalPrevistoEl.textContent = formatCurrency(resumo.previsto);
+  totalPagoEl.textContent = formatCurrency(resumo.pago);
+  totalAbertoEl.textContent = formatCurrency(resumo.emAberto);
+  totalAtrasadoEl.textContent = `${resumo.atrasados} ${resumo.atrasados === 1 ? 'conta' : 'contas'}`;
 }
 
 function formatCurrency(value) {
@@ -310,6 +369,10 @@ function carregarContasMes() {
     .then((dados) => {
       state.datasets.contasMes = Array.isArray(dados) ? dados : [];
       renderContasMes();
+<<<<<<< codex/plan-project-creation-steps-sq9xfa
+      updateHomeKpis();
+=======
+>>>>>>> ReadMe
       if (typeof window.renderDashboard === 'function') {
         window.renderDashboard(state.datasets.contasMes);
       }

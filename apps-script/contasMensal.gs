@@ -34,7 +34,11 @@ function getContasMensalSheet() {
   const ss = SpreadsheetApp.getActive();
   const sheet = ss.getSheetByName(CONTAS_MENSAL_SHEET);
   if (!sheet) {
-    throw new Error('Aba CONTAS_MENSAL não encontrada.');
+    const disponiveis = ss
+      .getSheets()
+      .map((s) => s.getName())
+      .join(', ');
+    throw new Error('Aba CONTAS_MENSAL não encontrada. Planilhas disponíveis: ' + disponiveis);
   }
   return sheet;
 }

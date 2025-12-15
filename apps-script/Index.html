@@ -10,6 +10,7 @@
     <header class="top-nav">
       <div class="logo">StarPay</div>
       <nav class="nav-links">
+        <button class="nav-link" data-section="home">Início</button>
         <button class="nav-link" data-section="dashboard">Dashboard</button>
         <button class="nav-link" data-section="contas-fixas">Contas Fixas</button>
         <button class="nav-link" data-section="contas-pontuais">Contas Pontuais</button>
@@ -18,7 +19,77 @@
     </header>
 
     <main class="main-container">
-      <section id="dashboard" class="page-section active" data-section>
+      <section id="home" class="page-section active" data-section>
+        <div class="home-hero">
+          <div class="home-hero__text">
+            <p class="eyebrow">Controle financeiro</p>
+            <h1>Bem-vindo ao StarPay</h1>
+            <p class="section-subtitle">Escolha abaixo a área que deseja acessar ou use os atalhos para ir direto ao fluxo desejado.</p>
+            <div class="home-actions">
+              <button class="btn btn-primary" data-section-card="contas-mes">Ir para Contas do Mês</button>
+              <button class="btn btn-secondary" data-section-card="dashboard">Ver Dashboard</button>
+            </div>
+          </div>
+          <div class="home-hero__kpis">
+            <div class="kpi-pill">
+              <p class="kpi-pill__label">Total previsto</p>
+              <p class="kpi-pill__value" id="kpi-previsto">—</p>
+            </div>
+            <div class="kpi-pill">
+              <p class="kpi-pill__label">Pago</p>
+              <p class="kpi-pill__value" id="kpi-pago">—</p>
+            </div>
+            <div class="kpi-pill">
+              <p class="kpi-pill__label">Em aberto</p>
+              <p class="kpi-pill__value" id="kpi-em-aberto">—</p>
+            </div>
+            <div class="kpi-pill warning">
+              <p class="kpi-pill__label">Atrasados</p>
+              <p class="kpi-pill__value" id="kpi-atrasado">—</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="feature-grid">
+          <article class="feature-card" data-section-card="dashboard">
+            <div class="feature-icon feature-icon--dashboard" aria-hidden="true"></div>
+            <div>
+              <p class="feature-kicker">Visão geral</p>
+              <h2>Dashboard</h2>
+              <p class="feature-desc">Indicadores em tempo real com totais pagos, vencendo e atrasados.</p>
+            </div>
+          </article>
+
+          <article class="feature-card" data-section-card="contas-fixas">
+            <div class="feature-icon feature-icon--fixas" aria-hidden="true"></div>
+            <div>
+              <p class="feature-kicker">Recorrência</p>
+              <h2>Contas Fixas</h2>
+              <p class="feature-desc">Cadastre compromissos recorrentes e mantenha seu calendário previsível.</p>
+            </div>
+          </article>
+
+          <article class="feature-card" data-section-card="contas-pontuais">
+            <div class="feature-icon feature-icon--pontuais" aria-hidden="true"></div>
+            <div>
+              <p class="feature-kicker">Lançamentos únicos</p>
+              <h2>Contas Pontuais</h2>
+              <p class="feature-desc">Registre despesas eventuais e envie direto para Contas do Mês.</p>
+            </div>
+          </article>
+
+          <article class="feature-card" data-section-card="contas-mes">
+            <div class="feature-icon feature-icon--mensal" aria-hidden="true"></div>
+            <div>
+              <p class="feature-kicker">Operação</p>
+              <h2>Contas do Mês</h2>
+              <p class="feature-desc">Gerencie pagamentos, marque baixas e aplique filtros rapidamente.</p>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="dashboard" class="page-section" data-section>
         <div class="section-header">
           <h1>Dashboard</h1>
           <div class="status-legends">
