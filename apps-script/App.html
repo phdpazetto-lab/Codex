@@ -369,7 +369,10 @@ function carregarContasMes() {
     .then((dados) => {
       state.datasets.contasMes = Array.isArray(dados) ? dados : [];
       renderContasMes();
+<<<<<<< codex/plan-project-creation-steps-sq9xfa
       updateHomeKpis();
+=======
+>>>>>>> ReadMe
       if (typeof window.renderDashboard === 'function') {
         window.renderDashboard(state.datasets.contasMes);
       }
