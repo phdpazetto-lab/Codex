@@ -29,18 +29,30 @@ const CONTAS_MENSAL_HEADER_ALIASES = {
   OBSERVACOES: 'OBSERVACOES'
 };
 
-/** Obtém a planilha de contas do mês. */
+function normalizeSheetName(name) {
+  return String(name || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^A-Z0-9]/gi, '')
+    .toUpperCase();
+}
+
+/** Obtém a planilha de contas do mês, tolerando variações de maiúsculas/acentos. */
 function getContasMensalSheet() {
   const ss = SpreadsheetApp.getActive();
-  const sheet = ss.getSheetByName(CONTAS_MENSAL_SHEET);
-  if (!sheet) {
-    const disponiveis = ss
-      .getSheets()
-      .map((s) => s.getName())
-      .join(', ');
-    throw new Error('Aba CONTAS_MENSAL não encontrada. Planilhas disponíveis: ' + disponiveis);
-  }
-  return sheet;
+
+  const exact = ss.getSheetByName(CONTAS_MENSAL_SHEET);
+  if (exact) return exact;
+
+  const normalizedTarget = normalizeSheetName(CONTAS_MENSAL_SHEET);
+  const fallback = ss.getSheets().find((sheet) => normalizeSheetName(sheet.getName()) === normalizedTarget);
+  if (fallback) return fallback;
+
+  const disponiveis = ss
+    .getSheets()
+    .map((s) => s.getName())
+    .join(', ');
+  throw new Error('Aba CONTAS_MENSAL não encontrada. Planilhas disponíveis: ' + disponiveis);
 }
 
 /** Normaliza texto de cabeçalho removendo acentos e espaços. */

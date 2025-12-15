@@ -63,21 +63,32 @@ const gasClient = {
   gerarMes: () => callServer('gerarMes'),
 };
 
+function navigateToSection(target) {
+  updateActiveSection(target);
+  window.location.hash = `#${state.currentSection}`;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 function setupRouting() {
   document.querySelectorAll(SELECTORS.navLink).forEach((link) => {
-    link.addEventListener('click', () => {
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
       const target = link.dataset.section;
-      updateActiveSection(target);
-      window.location.hash = `#${target}`;
+      navigateToSection(target);
     });
   });
 
   document.querySelectorAll(SELECTORS.featureCard).forEach((card) => {
-    card.addEventListener('click', () => {
+    card.addEventListener('click', (event) => {
+      event.preventDefault();
       const target = card.dataset.sectionCard;
-      updateActiveSection(target);
-      window.location.hash = `#${target}`;
+      navigateToSection(target);
     });
+  });
+
+  window.addEventListener('hashchange', () => {
+    const hashTarget = window.location.hash.replace('#', '');
+    updateActiveSection(hashTarget || 'home');
   });
 
   const initialHash = window.location.hash.replace('#', '');
