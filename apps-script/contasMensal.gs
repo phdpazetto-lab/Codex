@@ -5,8 +5,7 @@
 
 const CONTAS_MENSAL_SHEET = 'CONTAS_MENSAL';
 
-// Normalização de cabeçalhos para suportar variações como "PAGO (SIM/NÃO)" ou
-// "VENCIMENTO (data)" mantendo chaves canônicas no código.
+// Normalização de cabeçalhos para suportar variações mantendo chaves canônicas no código.
 const CONTAS_MENSAL_HEADER_ALIASES = {
   IDMENSAL: 'ID_MENSAL',
   ID_CONTA_ORIGEM: 'ID_CONTA_ORIGEM',
@@ -30,10 +29,7 @@ const CONTAS_MENSAL_HEADER_ALIASES = {
   OBSERVACOES: 'OBSERVACOES'
 };
 
-/**
- * Obtém a planilha de contas do mês.
- * @returns {GoogleAppsScript.Spreadsheet.Sheet}
- */
+/** Obtém a planilha de contas do mês. */
 function getContasMensalSheet() {
   const ss = SpreadsheetApp.getActive();
   const sheet = ss.getSheetByName(CONTAS_MENSAL_SHEET);
@@ -43,11 +39,7 @@ function getContasMensalSheet() {
   return sheet;
 }
 
-/**
- * Cria um mapa "nome da coluna" -> "índice" para leitura/escrita.
- * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet
- * @returns {Object<string, number>}
- */
+/** Normaliza texto de cabeçalho removendo acentos e espaços. */
 function normalizeHeaderKey(name) {
   if (!name) return '';
   const normalized = String(name)
@@ -58,39 +50,29 @@ function normalizeHeaderKey(name) {
   return CONTAS_MENSAL_HEADER_ALIASES[normalized] || normalized;
 }
 
+/** Cria um mapa "nome da coluna" -> índice para leitura/escrita. */
 function getHeaderMap(sheet) {
   const header = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const map = {};
-
   header.forEach((name, idx) => {
     const key = normalizeHeaderKey(name);
     if (key) {
       map[key] = idx;
     }
   });
-
   return map;
 }
 
-/**
- * Converte valores diversos para o formato SIM/NÃO esperado na planilha.
- * @param {*} value
- * @returns {string}
- */
+/** Converte valor diverso para SIM/NAO. */
 function toSimNao(value) {
   const normalized = String(value || '')
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')
     .toUpperCase();
-  if (normalized === 'SIM') return 'SIM';
-  return 'NAO';
+  return normalized === 'SIM' || normalized === 'TRUE' || normalized === 'YES' ? 'SIM' : 'NAO';
 }
 
-/**
- * Remove horário para comparações de data.
- * @param {Date} date
- * @returns {Date|null}
- */
+/** Remove horário para comparações de data. */
 function normalizeDate(date) {
   if (!date) return null;
   const d = date instanceof Date ? date : new Date(date);
@@ -98,13 +80,7 @@ function normalizeDate(date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
 
-/**
- * Calcula se a conta está atrasada considerando vencimento, pagamento e status.
- * @param {Date|null} vencimento
- * @param {string} pagoSimNao
- * @param {Date|null} dataPagamento
- * @returns {string}
- */
+/** Calcula se a conta está atrasada. */
 function calcularAtraso(vencimento, pagoSimNao, dataPagamento) {
   const venc = normalizeDate(vencimento);
   const pagamento = normalizeDate(dataPagamento);
@@ -118,6 +94,15 @@ function calcularAtraso(vencimento, pagoSimNao, dataPagamento) {
 
   const hoje = normalizeDate(new Date());
   return hoje > venc ? 'SIM' : 'NAO';
+}
+
+/** Converte uma linha em objeto usando o header map. */
+function mapRowToObject(row, headerMap) {
+  const obj = {};
+  Object.keys(headerMap).forEach((key) => {
+    obj[key] = row[headerMap[key]];
+  });
+  return obj;
 }
 
 /**
@@ -149,9 +134,7 @@ function listarContasMes(filtros) {
   return rows
     .map((row) => mapRowToObject(row, headerMap))
     .filter((row) => {
-      // Atualiza campo ATRASADO em memória para refletir a regra atual.
-      const atrasado = calcularAtraso(row.VENCIMENTO, row.PAGO, row.DATA_PAGAMENTO);
-      row.ATRASADO = atrasado;
+      row.ATRASADO = calcularAtraso(row.VENCIMENTO, row.PAGO, row.DATA_PAGAMENTO);
 
       if (statusFiltro === 'PAGO' && toSimNao(row.PAGO) !== 'SIM') return false;
       if ((statusFiltro === 'PENDENTE' || statusFiltro === 'EM_ABERTO') && toSimNao(row.PAGO) === 'SIM') return false;
@@ -204,7 +187,6 @@ function marcarPago(id, dataPagamento, valorReal, metodo, observacoes) {
 
 /**
  * Atualiza uma linha da aba CONTAS_MENSAL.
- * Permite edição de campos diversos mantendo regras de status.
  * @param {Object} payload
  * @param {string|number} payload.id
  * @returns {Object} Linha atualizada.
@@ -252,12 +234,4 @@ function atualizarContaMensal(payload) {
   sheet.getRange(targetIdx + 1, 1, 1, sheet.getLastColumn()).setValues([row]);
 
   return mapRowToObject(row, headerMap);
-}
-
-function mapRowToObject(row, headerMap) {
-  const obj = {};
-  Object.keys(headerMap).forEach((key) => {
-    obj[key] = row[headerMap[key]];
-  });
-  return obj;
 }

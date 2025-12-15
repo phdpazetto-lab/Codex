@@ -1,0 +1,90 @@
+<!-- Formulários para cadastro de contas fixas e pontuais. A lógica está em webapp/app.js -->
+<div class="forms-grid">
+  <section class="card">
+    <header class="card-header">
+      <h2>Nova conta fixa</h2>
+      <p class="muted">Registre compromissos recorrentes com validação de PF/PJ e dia de recorrência.</p>
+    </header>
+    <form id="form-conta-fixa" class="form-grid" novalidate>
+      <div class="form-field">
+        <label for="nomeContaFixa">Nome da conta *</label>
+        <input type="text" id="nomeContaFixa" name="nomeConta" required />
+      </div>
+      <div class="form-field">
+        <label for="categoriaContaFixa">Categoria *</label>
+        <input type="text" id="categoriaContaFixa" name="categoria" required />
+      </div>
+      <div class="form-field">
+        <label for="tipoPessoaContaFixa">Tipo de pessoa *</label>
+        <select id="tipoPessoaContaFixa" name="tipoPessoa" required>
+          <option value="">Selecione</option>
+          <option value="PF">Pessoa Física</option>
+          <option value="PJ">Pessoa Jurídica</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="valorPrevistoContaFixa">Valor previsto *</label>
+        <input type="number" id="valorPrevistoContaFixa" name="valorPrevisto" min="0" step="0.01" required />
+      </div>
+      <div class="form-field">
+        <label for="diaRecorrenciaContaFixa">Dia de recorrência (1-28) *</label>
+        <input type="number" id="diaRecorrenciaContaFixa" name="diaRecorrencia" min="1" max="28" required />
+      </div>
+      <div class="form-field">
+        <label for="metodoPagamentoContaFixa">Método de pagamento</label>
+        <input type="text" id="metodoPagamentoContaFixa" name="metodoPagamento" />
+      </div>
+      <div class="form-field full-row">
+        <label for="observacoesContaFixa">Observações</label>
+        <textarea id="observacoesContaFixa" name="observacoes" rows="2"></textarea>
+      </div>
+      <div class="form-actions full-row">
+        <button type="submit" class="btn btn-primary">Cadastrar conta fixa</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card">
+    <header class="card-header">
+      <h2>Nova conta pontual</h2>
+      <p class="muted">Lançamentos únicos entram direto em Contas do Mês.</p>
+    </header>
+    <form id="form-conta-pontual" class="form-grid" novalidate>
+      <div class="form-field">
+        <label for="nomeContaPontual">Nome da conta *</label>
+        <input type="text" id="nomeContaPontual" name="nomeConta" required />
+      </div>
+      <div class="form-field">
+        <label for="categoriaContaPontual">Categoria *</label>
+        <input type="text" id="categoriaContaPontual" name="categoria" required />
+      </div>
+      <div class="form-field">
+        <label for="tipoPessoaContaPontual">Tipo de pessoa *</label>
+        <select id="tipoPessoaContaPontual" name="tipoPessoa" required>
+          <option value="">Selecione</option>
+          <option value="PF">Pessoa Física</option>
+          <option value="PJ">Pessoa Jurídica</option>
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="valorPrevistoContaPontual">Valor previsto *</label>
+        <input type="number" id="valorPrevistoContaPontual" name="valorPrevisto" min="0" step="0.01" required />
+      </div>
+      <div class="form-field">
+        <label for="dataVencimentoContaPontual">Data de vencimento *</label>
+        <input type="date" id="dataVencimentoContaPontual" name="vencimento" required />
+      </div>
+      <div class="form-field">
+        <label for="metodoPagamentoContaPontual">Método de pagamento</label>
+        <input type="text" id="metodoPagamentoContaPontual" name="metodoPagamento" />
+      </div>
+      <div class="form-field full-row">
+        <label for="observacoesContaPontual">Observações</label>
+        <textarea id="observacoesContaPontual" name="observacoes" rows="2"></textarea>
+      </div>
+      <div class="form-actions full-row">
+        <button type="submit" class="btn btn-primary">Cadastrar conta pontual</button>
+      </div>
+    </form>
+  </section>
+</div>

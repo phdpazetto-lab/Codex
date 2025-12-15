@@ -58,15 +58,13 @@ function validarPayloadContaFixa_(payload, { requerId = false } = {}) {
     throw new Error('Payload inválido.');
   }
 
-  const id = limparTexto_(
-    payload.id || payload.id_conta || payload.ID_CONTA || ''
-  );
+  const id = limparTexto_(payload.id || payload.id_conta || payload.ID_CONTA || '');
 
   if (requerId && !id) {
     throw new Error('ID_CONTA é obrigatório.');
   }
 
-  const nomeConta = limparTexto_(payload.nome_conta || payload.nome || '');
+  const nomeConta = limparTexto_(payload.nomeConta || payload.nome_conta || payload.nome || '');
   if (!nomeConta) {
     throw new Error('nome_conta é obrigatório.');
   }
@@ -76,14 +74,14 @@ function validarPayloadContaFixa_(payload, { requerId = false } = {}) {
     throw new Error('categoria é obrigatória.');
   }
 
-  const tipoPessoa = limparTexto_(payload.tipo_pessoa || '').toUpperCase();
+  const tipoPessoa = limparTexto_(payload.tipoPessoa || payload.tipo_pessoa || '').toUpperCase();
   if (!['PF', 'PJ'].includes(tipoPessoa)) {
     throw new Error('tipo_pessoa deve ser PF ou PJ.');
   }
 
-  const valorPrevisto = validarValorPrevisto_(payload.valor_previsto);
-  const diaRecorrencia = validarDiaRecorrencia_(payload.dia_recorrecia);
-  const metodoPagamento = limparTexto_(payload.metodo_pagamento || '');
+  const valorPrevisto = validarValorPrevisto_(payload.valorPrevisto || payload.valor_previsto);
+  const diaRecorrencia = validarDiaRecorrencia_(payload.diaRecorrencia || payload.dia_recorrecia);
+  const metodoPagamento = limparTexto_(payload.metodoPagamento || payload.metodo_pagamento || '');
   const observacoes = limparTexto_(payload.observacoes || '');
 
   return {
