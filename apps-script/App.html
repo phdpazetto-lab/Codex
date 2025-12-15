@@ -1,3 +1,4 @@
+<script type="module">
 // StarPay WebApp controller: routing, GAS calls, rendering and forms.
 
 const state = {
@@ -31,6 +32,10 @@ function showToast(message, variant = 'info', duration = 3000) {
   toast.className = `toast ${variant}`;
   toast.textContent = message;
   container.appendChild(toast);
+
+  requestAnimationFrame(() => {
+    toast.classList.add('visible');
+  });
 
   setTimeout(() => {
     toast.style.opacity = '0';
@@ -514,3 +519,4 @@ window.gasClient = gasClient;
 window.state = state;
 window.carregarContasMes = carregarContasMes;
 window.carregarContasFixas = carregarContasFixas;
+</script>
