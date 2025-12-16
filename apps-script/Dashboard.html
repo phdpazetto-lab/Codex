@@ -1,6 +1,30 @@
 <div id="dashboard-root" class="dashboard-root">
   <div id="kpi-grid" class="kpi-grid"></div>
   <div id="chart-grid" class="chart-grid"></div>
+  <div class="dashboard-card table-card recent-card">
+    <div class="table-card__header">
+      <div>
+        <p class="kpi-label">Fluxo de pagamentos</p>
+        <h2 class="table-title">Últimos pagamentos registrados</h2>
+      </div>
+      <div class="table-card__actions">
+        <button type="button" class="btn btn-secondary" data-action="dashboard-refresh">Atualizar</button>
+      </div>
+    </div>
+    <div id="pagamentos-recentes" class="recent-list" aria-live="polite"></div>
+  </div>
+  <div class="dashboard-card table-card">
+    <div class="table-card__header">
+      <div>
+        <p class="kpi-label">Contas mensais</p>
+        <h2 class="table-title">Painel rápido</h2>
+      </div>
+      <div class="table-card__actions">
+        <button type="button" class="btn btn-secondary" data-action="dashboard-refresh">Atualizar</button>
+      </div>
+    </div>
+    <div id="dashboard-contas-table" class="dashboard-table-container" aria-live="polite"></div>
+  </div>
 </div>
 
 <style>
@@ -60,6 +84,139 @@
   .chart-canvas {
     width: 100%;
     height: 240px;
+  }
+
+  .table-card {
+    padding: 12px;
+  }
+
+  .recent-card .table-card__header {
+    margin-bottom: 6px;
+  }
+
+  .recent-list {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .recent-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+  }
+
+  .recent-item__title {
+    font-weight: 600;
+    color: #e5e7eb;
+  }
+
+  .recent-item__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+
+  .recent-item__amount {
+    font-weight: 700;
+    color: #4ade80;
+  }
+
+  .recent-item__date {
+    color: #93c5fd;
+  }
+
+  .table-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .table-title {
+    margin: 4px 0 0 0;
+    font-size: 18px;
+  }
+
+  .dashboard-table-container {
+    border: 1px solid #1f2937;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0f172a;
+  }
+
+  .dashboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #e5e7eb;
+  }
+
+  .dashboard-table th,
+  .dashboard-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: left;
+    font-size: 13px;
+  }
+
+  .dashboard-table th {
+    background: rgba(255, 255, 255, 0.02);
+    color: #cbd5e1;
+    font-weight: 600;
+  }
+
+  .dashboard-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .status-chip small {
+    color: #cbd5e1;
+    font-weight: 500;
+  }
+
+  .status-chip.pago {
+    background: rgba(22, 163, 74, 0.15);
+    color: #4ade80;
+  }
+
+  .status-chip.atrasado {
+    background: rgba(239, 68, 68, 0.12);
+    color: #f87171;
+  }
+
+  .status-chip.vencendo {
+    background: rgba(249, 115, 22, 0.12);
+    color: #fb923c;
+  }
+
+  .status-chip.aberto {
+    background: rgba(59, 130, 246, 0.12);
+    color: #93c5fd;
+  }
+
+  .table-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
   }
 </style>
 
@@ -188,6 +345,19 @@
       return { kpis, pfPj, categorias, metodos, mensal };
     }
 
+    function statusFromRecord(record) {
+      if (isPaid(record)) {
+        return { key: 'pago', label: 'Pago', detail: 'Baixado', accent: '#4ade80' };
+      }
+      if (isLate(record)) {
+        return { key: 'atrasado', label: 'Atrasado', detail: 'Vencido', accent: '#f87171' };
+      }
+      if (isDueSoon(record)) {
+        return { key: 'vencendo', label: 'Vencendo', detail: 'Próximo do vencimento', accent: '#fb923c' };
+      }
+      return { key: 'aberto', label: 'Em aberto', detail: 'Dentro do prazo', accent: '#93c5fd' };
+    }
+
     function ensureContainers() {
       const root = document.getElementById('dashboard-root');
       if (!root) {
@@ -270,6 +440,145 @@
         card.appendChild(value);
         container.appendChild(card);
       });
+    }
+
+    function renderDashboardTable(records) {
+      const container = document.getElementById('dashboard-contas-table');
+      if (!container) return;
+
+      if (!records || !records.length) {
+        container.innerHTML = '<p class="muted" style="padding:12px;">Nenhuma conta encontrada para o período.</p>';
+        return;
+      }
+
+      const sorted = [...records].sort((a, b) => {
+        const da = parseDate(a.VENCIMENTO || a.vencimento) || new Date(8640000000000000);
+        const db = parseDate(b.VENCIMENTO || b.vencimento) || new Date(8640000000000000);
+        return da - db;
+      });
+
+      const table = document.createElement('table');
+      table.className = 'dashboard-table';
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Conta</th>
+            <th>Vencimento</th>
+            <th>Previsto</th>
+            <th>Pago</th>
+            <th>Status</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      `;
+
+      const tbody = table.querySelector('tbody');
+      sorted.slice(0, 15).forEach((item) => {
+        const row = document.createElement('tr');
+        const status = statusFromRecord(item);
+        const valorPrevisto = currencyFormatter.format(getValuePrevisto(item));
+        const valorPago = currencyFormatter.format(getValuePago(item));
+        const vencimento = parseDate(item.VENCIMENTO || item.vencimento);
+        const vencimentoStr = vencimento ? vencimento.toLocaleDateString('pt-BR') : '—';
+
+        row.innerHTML = `
+          <td>${item.NOME_CONTA || item.nomeConta}</td>
+          <td>${vencimentoStr}</td>
+          <td>${valorPrevisto}</td>
+          <td>${valorPago}</td>
+          <td>
+            <span class="status-chip ${status.key}">
+              ${status.label}
+              <small>${status.detail}</small>
+            </span>
+          </td>
+          <td class="table-actions"></td>
+        `;
+
+        const actions = row.querySelector('.table-actions');
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'btn btn-secondary';
+        editBtn.textContent = 'Editar';
+        editBtn.onclick = () => {
+          if (typeof window.openContaEditor === 'function') {
+            window.openContaEditor(item);
+          }
+        };
+
+        const pagarBtn = document.createElement('button');
+        pagarBtn.type = 'button';
+        pagarBtn.className = 'btn btn-primary';
+        pagarBtn.textContent = 'Registrar pagamento';
+        pagarBtn.onclick = () => {
+          if (typeof window.openContaEditor === 'function') {
+            window.openContaEditor(item, { pagar: true });
+          }
+        };
+
+        actions.appendChild(editBtn);
+        actions.appendChild(pagarBtn);
+        tbody.appendChild(row);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(table);
+    }
+
+    function renderRecentPayments(records) {
+      const container = document.getElementById('pagamentos-recentes');
+      if (!container) return;
+
+      const pagos = (records || [])
+        .filter((item) => isPaid(item))
+        .sort((a, b) => {
+          const da = parseDate(a.DATA_PAGAMENTO || a.dataPagamento) || parseDate(a.VENCIMENTO || a.vencimento) || new Date(0);
+          const db = parseDate(b.DATA_PAGAMENTO || b.dataPagamento) || parseDate(b.VENCIMENTO || b.vencimento) || new Date(0);
+          return db - da;
+        })
+        .slice(0, 10);
+
+      if (!pagos.length) {
+        container.innerHTML = '<p class="muted">Nenhum pagamento registrado ainda.</p>';
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      pagos.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'recent-item';
+
+        const titulo = document.createElement('div');
+        titulo.className = 'recent-item__title';
+        titulo.textContent = item.NOME_CONTA || item.nomeConta || 'Conta';
+
+        const meta = document.createElement('div');
+        meta.className = 'recent-item__meta';
+
+        const valor = document.createElement('span');
+        valor.className = 'recent-item__amount';
+        valor.textContent = currencyFormatter.format(getValuePago(item) || getValuePrevisto(item));
+
+        const pagoEm = document.createElement('span');
+        pagoEm.className = 'recent-item__date';
+        const data = parseDate(item.DATA_PAGAMENTO || item.dataPagamento) || parseDate(item.VENCIMENTO || item.vencimento);
+        pagoEm.textContent = data ? data.toLocaleDateString('pt-BR') : 'Data não informada';
+
+        const metodo = document.createElement('span');
+        metodo.textContent = `Método: ${item.METODO_PAGAMENTO || item.metodoPagamento || '—'}`;
+
+        meta.appendChild(valor);
+        meta.appendChild(pagoEm);
+        meta.appendChild(metodo);
+
+        card.appendChild(titulo);
+        card.appendChild(meta);
+        frag.appendChild(card);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(frag);
     }
 
     function drawPieChart(canvas, data) {
@@ -415,6 +724,8 @@
       const aggregated = aggregateData(records || []);
       renderKPIs(aggregated.kpis);
       renderCharts(aggregated);
+      renderRecentPayments(records || []);
+      renderDashboardTable(records || []);
     }
 
     function loadDashboard() {

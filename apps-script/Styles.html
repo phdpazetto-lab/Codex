@@ -459,6 +459,207 @@ body {
   background: var(--accent);
 }
 
+.status-legend {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.75rem 0;
+}
+
+.legend-pill {
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  font-weight: 700;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+}
+
+.legend-pill--pago {
+  color: var(--success);
+  border-color: rgba(22, 163, 74, 0.2);
+}
+
+.legend-pill--vencendo {
+  color: var(--warning);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.legend-pill--atrasado {
+  color: var(--danger);
+  border-color: rgba(220, 38, 38, 0.35);
+}
+
+.legend-pill--aberto {
+  color: var(--accent);
+  border-color: rgba(37, 99, 235, 0.25);
+}
+
+.status-badge {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  background: #f8fafc;
+}
+
+.status-badge strong {
+  font-size: 0.95rem;
+}
+
+.status-badge small {
+  color: var(--muted);
+}
+
+.status-badge--pago {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.status-badge--atrasado {
+  border-color: rgba(220, 38, 38, 0.4);
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.status-badge--vencendo {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+.status-badge--aberto {
+  border-color: rgba(37, 99, 235, 0.35);
+  background: rgba(37, 99, 235, 0.05);
+}
+
+.tabela-contas-mes .acoes-conta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tabela-contas-mes .status-cell {
+  min-width: 180px;
+}
+
+.loading-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(2px);
+  z-index: 2;
+  border-radius: 12px;
+  text-align: center;
+  color: var(--text);
+}
+
+.is-loading {
+  position: relative;
+  min-height: 180px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 20;
+}
+
+.modal-card {
+  background: #fff;
+  border-radius: 14px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+.modal-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.modal-card__header h2 {
+  margin: 0.25rem 0 0 0;
+}
+
+.modal-form .form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.modal-form label {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.pill-highlight {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  display: inline-block;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  margin: 6px 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.tabela-contas-mes tbody tr:hover {
+  background: #f8fafc;
+}
+
 @media (max-width: 720px) {
   .top-nav {
     flex-direction: column;
