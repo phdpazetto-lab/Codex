@@ -1,6 +1,18 @@
 <div id="dashboard-root" class="dashboard-root">
   <div id="kpi-grid" class="kpi-grid"></div>
   <div id="chart-grid" class="chart-grid"></div>
+  <div class="dashboard-card table-card recent-card">
+    <div class="table-card__header">
+      <div>
+        <p class="kpi-label">Fluxo de pagamentos</p>
+        <h2 class="table-title">Últimos pagamentos registrados</h2>
+      </div>
+      <div class="table-card__actions">
+        <button type="button" class="btn btn-secondary" data-action="dashboard-refresh">Atualizar</button>
+      </div>
+    </div>
+    <div id="pagamentos-recentes" class="recent-list" aria-live="polite"></div>
+  </div>
   <div class="dashboard-card table-card">
     <div class="table-card__header">
       <div>
@@ -76,6 +88,49 @@
 
   .table-card {
     padding: 12px;
+  }
+
+  .recent-card .table-card__header {
+    margin-bottom: 6px;
+  }
+
+  .recent-list {
+    display: grid;
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .recent-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 6px 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+  }
+
+  .recent-item__title {
+    font-weight: 600;
+    color: #e5e7eb;
+  }
+
+  .recent-item__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+
+  .recent-item__amount {
+    font-weight: 700;
+    color: #4ade80;
+  }
+
+  .recent-item__date {
+    color: #93c5fd;
   }
 
   .table-card__header {
@@ -471,6 +526,61 @@
       container.appendChild(table);
     }
 
+    function renderRecentPayments(records) {
+      const container = document.getElementById('pagamentos-recentes');
+      if (!container) return;
+
+      const pagos = (records || [])
+        .filter((item) => isPaid(item))
+        .sort((a, b) => {
+          const da = parseDate(a.DATA_PAGAMENTO || a.dataPagamento) || parseDate(a.VENCIMENTO || a.vencimento) || new Date(0);
+          const db = parseDate(b.DATA_PAGAMENTO || b.dataPagamento) || parseDate(b.VENCIMENTO || b.vencimento) || new Date(0);
+          return db - da;
+        })
+        .slice(0, 10);
+
+      if (!pagos.length) {
+        container.innerHTML = '<p class="muted">Nenhum pagamento registrado ainda.</p>';
+        return;
+      }
+
+      const frag = document.createDocumentFragment();
+      pagos.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'recent-item';
+
+        const titulo = document.createElement('div');
+        titulo.className = 'recent-item__title';
+        titulo.textContent = item.NOME_CONTA || item.nomeConta || 'Conta';
+
+        const meta = document.createElement('div');
+        meta.className = 'recent-item__meta';
+
+        const valor = document.createElement('span');
+        valor.className = 'recent-item__amount';
+        valor.textContent = currencyFormatter.format(getValuePago(item) || getValuePrevisto(item));
+
+        const pagoEm = document.createElement('span');
+        pagoEm.className = 'recent-item__date';
+        const data = parseDate(item.DATA_PAGAMENTO || item.dataPagamento) || parseDate(item.VENCIMENTO || item.vencimento);
+        pagoEm.textContent = data ? data.toLocaleDateString('pt-BR') : 'Data não informada';
+
+        const metodo = document.createElement('span');
+        metodo.textContent = `Método: ${item.METODO_PAGAMENTO || item.metodoPagamento || '—'}`;
+
+        meta.appendChild(valor);
+        meta.appendChild(pagoEm);
+        meta.appendChild(metodo);
+
+        card.appendChild(titulo);
+        card.appendChild(meta);
+        frag.appendChild(card);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(frag);
+    }
+
     function drawPieChart(canvas, data) {
       const ctx = canvas.getContext('2d');
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -614,6 +724,7 @@
       const aggregated = aggregateData(records || []);
       renderKPIs(aggregated.kpis);
       renderCharts(aggregated);
+      renderRecentPayments(records || []);
       renderDashboardTable(records || []);
     }
 

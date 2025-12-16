@@ -363,13 +363,15 @@ function openContaEditor(conta, options = {}) {
       dataPagamento: form.dataPagamento.value ? new Date(form.dataPagamento.value) : '',
       metodoPagamento: form.metodoPagamento.value.trim(),
       observacoes: form.observacoes.value.trim(),
-      pago: form.pago.checked ? 'SIM' : 'NAO',
     };
+
+    const promise = form.pago.checked
+      ? gasClient.marcarPago(payload.id, payload.dataPagamento, payload.valorReal, payload.metodoPagamento, payload.observacoes)
+      : gasClient.atualizarContaMensal({ ...payload, pago: 'NAO' });
 
     const action = form.pago.checked ? 'Pagamento salvo.' : 'Alterações registradas.';
 
-    gasClient
-      .atualizarContaMensal(payload)
+    promise
       .then(() => {
         showToast(action, 'success');
         closeModal();
