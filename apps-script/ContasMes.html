@@ -1,4 +1,4 @@
-<!-- Tabela de Contas do Mês. Renderização e chamadas estão em webapp/app.js -->
+<!-- Tabela de Contas do Mês. Renderização e chamadas estão em App.html -->
 <section class="card" id="contas-mes-card">
   <div class="card-header row-between">
     <div>
@@ -9,6 +9,13 @@
       <button type="button" class="btn" data-action="gerar-mes">Gerar mês agora</button>
       <button type="button" class="btn btn-secondary" data-action="atualizar-contas-mes">Atualizar lista</button>
     </div>
+  </div>
+
+  <div class="status-legend" aria-label="Legenda de status das contas">
+    <span class="legend-pill legend-pill--pago">Pago</span>
+    <span class="legend-pill legend-pill--vencendo">Vencendo</span>
+    <span class="legend-pill legend-pill--atrasado">Atrasado</span>
+    <span class="legend-pill legend-pill--aberto">Em aberto</span>
   </div>
 
   <form id="filtros-contas-mes" class="filters-grid">

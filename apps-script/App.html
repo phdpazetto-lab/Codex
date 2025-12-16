@@ -44,6 +44,30 @@ function showToast(message, variant = 'info', duration = 3000) {
   }, duration);
 }
 
+function setLoading(target, isLoading, message = 'Carregando...') {
+  const container = typeof target === 'string' ? document.querySelector(target) : target;
+  if (!container) return;
+
+  let overlay = container.querySelector('.loading-state');
+  if (isLoading) {
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.className = 'loading-state';
+      overlay.innerHTML = `
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="loading-message">${message}</p>
+      `;
+      container.appendChild(overlay);
+    }
+    container.classList.add('is-loading');
+    const messageEl = overlay.querySelector('.loading-message');
+    if (messageEl) messageEl.textContent = message;
+  } else {
+    container.classList.remove('is-loading');
+    overlay?.remove();
+  }
+}
+
   function callServer(fn, ...args) {
     return new Promise((resolve, reject) => {
       const runner = (typeof google !== 'undefined' && google.script && google.script.run) || null;
@@ -63,6 +87,7 @@ const gasClient = {
   criarContaFixa: (payload) => callServer('criarContaFixa', payload),
   criarContaPontual: (payload) => callServer('criarContaPontual', payload),
   listarContasMes: (payload) => callServer('listarContasMes', payload),
+  atualizarContaMensal: (payload) => callServer('atualizarContaMensal', payload),
   marcarPago: (id, dataPagamento, valorReal, metodo, observacoes) =>
     callServer('marcarPago', id, dataPagamento, valorReal, metodo, observacoes),
   gerarMes: () => callServer('gerarMes'),
@@ -130,6 +155,36 @@ function parseNumeric(value) {
   const sanitized = String(value).replace(/[^0-9,.-]/g, '').replace(',', '.');
   const parsed = Number.parseFloat(sanitized);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function statusInfo(conta) {
+  const pago = normalizeBoolean(conta.PAGO || conta.pago);
+  const atrasado = normalizeBoolean(conta.ATRASADO || conta.atrasado);
+  const vencimentoValor = conta.VENCIMENTO || conta.vencimento;
+  const dataPagamento = conta.DATA_PAGAMENTO || conta.dataPagamento;
+  const vencimento = vencimentoValor ? new Date(vencimentoValor) : null;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const diasParaVencer = vencimento ? Math.round((vencimento - hoje) / (1000 * 60 * 60 * 24)) : null;
+
+  if (pago) {
+    return {
+      key: 'pago',
+      label: 'Pago',
+      detail: dataPagamento ? `Pago em ${formatDate(dataPagamento)}` : 'Baixado',
+    };
+  }
+
+  if (atrasado || (vencimento && vencimento < hoje)) {
+    return { key: 'atrasado', label: 'Atrasado', detail: vencimento ? `Venceu em ${formatDate(vencimento)}` : 'Em atraso' };
+  }
+
+  if (diasParaVencer !== null && diasParaVencer <= 3) {
+    const diasLabel = diasParaVencer === 0 ? 'Vence hoje' : `Vence em ${diasParaVencer} dia(s)`;
+    return { key: 'vencendo', label: 'Vencendo', detail: diasLabel };
+  }
+
+  return { key: 'aberto', label: 'Em aberto', detail: 'Dentro do prazo' };
 }
 
 function updateHomeKpis() {
@@ -220,21 +275,124 @@ function renderContasFixas() {
   container.appendChild(table);
 }
 
-function statusBadge(conta) {
-  const pago = String(conta.PAGO || conta.pago || '').toUpperCase() === 'SIM';
-  const atrasado = String(conta.ATRASADO || conta.atrasado || '').toUpperCase() === 'SIM';
-  const span = document.createElement('span');
-  let classe = 'status-badge--em-aberto';
-  let label = 'Em aberto';
-  if (pago) {
-    classe = 'status-badge--pago';
-    label = 'Pago';
-  } else if (atrasado) {
-    classe = 'status-badge--atrasado';
-    label = 'Atrasado';
+function openContaEditor(conta, options = {}) {
+  const idMensal = conta?.ID_MENSAL || conta?.id_mensal || conta?.idMensal;
+  if (!idMensal) {
+    showToast('ID da conta não encontrado.', 'error');
+    return;
   }
-  span.className = `status-badge ${classe}`;
-  span.textContent = label;
+
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  const valorPrevisto = parseNumeric(conta.VALOR_PREVISTO || conta.valorPrevisto);
+  const valorRealAtual = parseNumeric(conta.VALOR_REAL || conta.valorReal);
+  const pagoDefault = options.pagar || normalizeBoolean(conta.PAGO || conta.pago);
+  const dataPagamentoValor = conta.DATA_PAGAMENTO || conta.dataPagamento;
+  const dataPagamentoISO = dataPagamentoValor
+    ? new Date(dataPagamentoValor).toISOString().split('T')[0]
+    : options.pagar
+      ? new Date().toISOString().split('T')[0]
+      : '';
+
+  overlay.innerHTML = `
+    <div class="modal-card" role="dialog" aria-modal="true" aria-label="Editar conta mensal">
+      <header class="modal-card__header">
+        <div>
+          <p class="eyebrow">${conta.CATEGORIA || conta.categoria || 'Conta'}</p>
+          <h2>${conta.NOME_CONTA || conta.nomeConta}</h2>
+        </div>
+        <button type="button" class="btn btn-ghost" data-close>&times;</button>
+      </header>
+      <form class="modal-form">
+        <div class="form-row">
+          <label>Valor previsto</label>
+          <div class="pill-highlight">${formatCurrency(valorPrevisto)}</div>
+        </div>
+        <div class="form-row">
+          <label for="valorReal">Valor real</label>
+          <input id="valorReal" name="valorReal" type="number" step="0.01" min="0" value="${valorRealAtual || ''}" />
+        </div>
+        <div class="form-row">
+          <label for="dataPagamento">Data de pagamento</label>
+          <input id="dataPagamento" name="dataPagamento" type="date" value="${dataPagamentoISO}" />
+        </div>
+        <div class="form-row">
+          <label for="metodoPagamento">Método</label>
+          <input id="metodoPagamento" name="metodoPagamento" type="text" value="${conta.METODO_PAGAMENTO || conta.metodoPagamento || ''}" />
+        </div>
+        <div class="form-row">
+          <label for="observacoes">Observações</label>
+          <textarea id="observacoes" name="observacoes" rows="2">${conta.OBSERVACOES || conta.observacoes || ''}</textarea>
+        </div>
+        <label class="checkbox-field">
+          <input type="checkbox" name="pago" ${pagoDefault ? 'checked' : ''} />
+          <span>Marcar como pago</span>
+        </label>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" data-close>Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  function closeModal() {
+    overlay.remove();
+  }
+
+  overlay.addEventListener('click', (event) => {
+    if (event.target === overlay || event.target.dataset.close !== undefined) {
+      closeModal();
+    }
+  });
+
+  const form = overlay.querySelector('form');
+  const submitBtn = form.querySelector('button[type="submit"]');
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Salvando...';
+
+    const valorRealInput = form.valorReal.value;
+    const valorReal = valorRealInput === '' ? undefined : Number(valorRealInput);
+    const payload = {
+      id: idMensal,
+      valorReal: Number.isFinite(valorReal) ? valorReal : undefined,
+      dataPagamento: form.dataPagamento.value ? new Date(form.dataPagamento.value) : '',
+      metodoPagamento: form.metodoPagamento.value.trim(),
+      observacoes: form.observacoes.value.trim(),
+      pago: form.pago.checked ? 'SIM' : 'NAO',
+    };
+
+    const action = form.pago.checked ? 'Pagamento salvo.' : 'Alterações registradas.';
+
+    gasClient
+      .atualizarContaMensal(payload)
+      .then(() => {
+        showToast(action, 'success');
+        closeModal();
+        carregarContasMes();
+      })
+      .catch((error) => {
+        console.error(error);
+        showToast('Falha ao atualizar conta.', 'error');
+      })
+      .finally(() => {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Salvar';
+      });
+  });
+
+  document.body.appendChild(overlay);
+}
+
+function statusBadge(conta) {
+  const info = statusInfo(conta);
+  const span = document.createElement('span');
+  span.className = `status-badge status-badge--${info.key}`;
+  span.innerHTML = `<strong>${info.label}</strong><small>${info.detail}</small>`;
   return span;
 }
 
@@ -271,13 +429,11 @@ function renderContasMes() {
         <th>Nome</th>
         <th>Categoria</th>
         <th>PF/PJ</th>
-        <th>Valor Previsto</th>
-        <th>Valor Real</th>
         <th>Vencimento</th>
-        <th>Pagamento</th>
-        <th>Status</th>
+        <th>Previsto</th>
+        <th>Pago</th>
+        <th>Situação</th>
         <th>Método</th>
-        <th>Origem</th>
         <th>Observações</th>
         <th>Ações</th>
       </tr>
@@ -297,13 +453,11 @@ function renderContasMes() {
       <td>${conta.NOME_CONTA || conta.nomeConta}</td>
       <td>${conta.CATEGORIA || conta.categoria || '—'}</td>
       <td>${conta.TIPO_PESSOA || conta.tipoPessoa || '—'}</td>
+      <td>${formatDate(conta.VENCIMENTO || conta.vencimento)}</td>
       <td>${formatCurrency(conta.VALOR_PREVISTO || conta.valorPrevisto)}</td>
       <td>${formatCurrency(conta.VALOR_REAL || conta.valorReal)}</td>
-      <td>${formatDate(conta.VENCIMENTO || conta.vencimento)}</td>
-      <td>${formatDate(conta.DATA_PAGAMENTO || conta.dataPagamento)}</td>
       <td class="status-cell"></td>
       <td>${conta.METODO_PAGAMENTO || conta.metodoPagamento || '—'}</td>
-      <td>${conta.ORIGEM || conta.origem || '—'}</td>
       <td>${conta.OBSERVACOES || conta.observacoes || '—'}</td>
       <td class="acoes-conta"></td>
     `;
@@ -312,11 +466,18 @@ function renderContasMes() {
     statusTd.appendChild(statusBadge(conta));
 
     const actionsTd = tr.querySelector('.acoes-conta');
+    const btnEditar = document.createElement('button');
+    btnEditar.type = 'button';
+    btnEditar.className = 'btn btn-secondary';
+    btnEditar.textContent = 'Editar valores';
+    btnEditar.addEventListener('click', () => openContaEditor(conta));
+
     const btnPago = document.createElement('button');
     btnPago.type = 'button';
     btnPago.className = 'btn btn-primary';
     btnPago.textContent = 'Marcar pago';
-    btnPago.addEventListener('click', () => promptPagamento(idMensal, conta));
+    btnPago.addEventListener('click', () => openContaEditor(conta, { pagar: true }));
+    actionsTd.appendChild(btnEditar);
     actionsTd.appendChild(btnPago);
 
     tbody.appendChild(tr);
@@ -324,28 +485,6 @@ function renderContasMes() {
 
   container.innerHTML = '';
   container.appendChild(table);
-}
-
-function promptPagamento(id, conta) {
-  if (!id) {
-    showToast('ID da conta não encontrado.', 'error');
-    return;
-  }
-  const valorDefault = conta.VALOR_REAL || conta.valorReal || conta.VALOR_PREVISTO || conta.valorPrevisto || '';
-  const valorReal = window.prompt('Valor pago (opcional)', valorDefault);
-  const metodo = window.prompt('Método de pagamento (opcional)', conta.METODO_PAGAMENTO || conta.metodoPagamento || '');
-  const observacoes = window.prompt('Observações (opcional)', conta.OBSERVACOES || conta.observacoes || '');
-
-  gasClient
-    .marcarPago(id, new Date(), valorReal ? Number(valorReal) : undefined, metodo, observacoes)
-    .then(() => {
-      showToast('Pagamento registrado com sucesso.', 'success');
-      carregarContasMes();
-    })
-    .catch((error) => {
-      console.error(error);
-      showToast('Falha ao marcar pagamento.', 'error');
-    });
 }
 
 function obterFiltrosForm() {
@@ -360,6 +499,8 @@ function obterFiltrosForm() {
 }
 
 function carregarContasFixas() {
+  const container = document.querySelector(SELECTORS.contasFixasLista)?.parentElement;
+  setLoading(container, true, 'Carregando contas fixas...');
   gasClient
     .listarContasFixas()
     .then((dados) => {
@@ -369,12 +510,15 @@ function carregarContasFixas() {
     .catch((error) => {
       console.error(error);
       showToast('Erro ao carregar contas fixas.', 'error');
-    });
+    })
+    .finally(() => setLoading(container, false));
 }
 
 function carregarContasMes() {
   const filtros = obterFiltrosForm();
   state.filtros = filtros;
+  const container = document.getElementById('contas-mes-card');
+  setLoading(container, true, 'Atualizando Contas do Mês...');
   gasClient
     .listarContasMes(filtros)
     .then((dados) => {
@@ -388,7 +532,8 @@ function carregarContasMes() {
     .catch((error) => {
       console.error(error);
       showToast('Erro ao carregar contas do mês.', 'error');
-    });
+    })
+    .finally(() => setLoading(container, false));
 }
 
 function validarNumero(valor) {
@@ -488,6 +633,7 @@ function setupForms() {
 function setupActions() {
   const gerarMesBtn = document.querySelector('[data-action="gerar-mes"]');
   const refreshMesBtn = document.querySelector('[data-action="atualizar-contas-mes"]');
+  const dashboardRefreshBtn = document.querySelector('[data-action="dashboard-refresh"]');
 
   gerarMesBtn?.addEventListener('click', () => {
     gasClient
@@ -503,6 +649,7 @@ function setupActions() {
   });
 
   refreshMesBtn?.addEventListener('click', () => carregarContasMes());
+  dashboardRefreshBtn?.addEventListener('click', () => carregarContasMes());
 }
 
 function initApp() {
@@ -519,4 +666,5 @@ window.gasClient = gasClient;
 window.state = state;
 window.carregarContasMes = carregarContasMes;
 window.carregarContasFixas = carregarContasFixas;
+window.openContaEditor = openContaEditor;
 </script>
