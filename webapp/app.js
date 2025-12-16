@@ -42,7 +42,7 @@ function showToast(message, variant = 'info', duration = 3000) {
 function callServer(fn, ...args) {
   return new Promise((resolve, reject) => {
     const runner = (typeof google !== 'undefined' && google.script && google.script.run) || null;
-    if (!runner || typeof runner[fn] !== 'function') {
+    if (!runner) {
       const message = `Função de servidor indisponível: ${fn}`;
       console.warn(message);
       reject(new Error(message));

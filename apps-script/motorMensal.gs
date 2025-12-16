@@ -1,6 +1,14 @@
 const SHEET_CONTAS_FIXAS = 'CONTAS_FIXAS';
 const SHEET_CONTAS_MENSAL = 'CONTAS_MENSAL';
 
+function normalizeSheetName(name) {
+  return String(name || '')
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^A-Z0-9]/gi, '')
+    .toUpperCase();
+}
+
 const CONTAS_MENSAL_HEADERS = [
   'ID_MENSAL',
   'ID_CONTA_ORIGEM',
@@ -21,11 +29,22 @@ const CONTAS_MENSAL_HEADERS = [
 
 function getSheetByName(name) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(name);
-  if (!sheet) {
-    throw new Error('Sheet not found: ' + name);
-  }
-  return sheet;
+  const exact = ss.getSheetByName(name);
+  if (exact) return exact;
+
+  const target = normalizeSheetName(name);
+  const fallback = ss
+    .getSheets()
+    .find((sheet) => normalizeSheetName(sheet.getName()) === target);
+
+  if (fallback) return fallback;
+
+  const disponiveis = ss
+    .getSheets()
+    .map((s) => s.getName())
+    .join(', ');
+
+  throw new Error('Sheet not found: ' + name + '. Planilhas disponíveis: ' + disponiveis);
 }
 
 function normalizeDate(dateInput) {
@@ -80,7 +99,7 @@ function getActiveFixedAccounts() {
 }
 
 function gerarMes(referenciaDate) {
-  const referencia = normalizeDate(referenciaDate);
+  const referencia = normalizeDate(referenciaDate || new Date());
 
   const sheetMensal = getSheetByName(SHEET_CONTAS_MENSAL);
   const valuesMensal = sheetMensal.getDataRange().getValues();
@@ -175,4 +194,8 @@ function criarContaPontual(payload) {
 
   sheet.appendRow(row);
   recalcularAtrasos();
+}
+
+function gerarMesAutomatico() {
+  gerarMes(new Date());
 }
