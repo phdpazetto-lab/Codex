@@ -1,3 +1,4 @@
+<script type="module">
 // StarPay WebApp controller: routing, GAS calls, rendering and forms.
 
 const state = {
@@ -32,6 +33,10 @@ function showToast(message, variant = 'info', duration = 3000) {
   toast.textContent = message;
   container.appendChild(toast);
 
+  requestAnimationFrame(() => {
+    toast.classList.add('visible');
+  });
+
   setTimeout(() => {
     toast.style.opacity = '0';
     toast.style.transform = 'translateY(6px)';
@@ -39,18 +44,18 @@ function showToast(message, variant = 'info', duration = 3000) {
   }, duration);
 }
 
-function callServer(fn, ...args) {
-  return new Promise((resolve, reject) => {
-    const runner = (typeof google !== 'undefined' && google.script && google.script.run) || null;
-    if (!runner) {
-      const message = `Função de servidor indisponível: ${fn}`;
-      console.warn(message);
-      reject(new Error(message));
-      return;
-    }
+  function callServer(fn, ...args) {
+    return new Promise((resolve, reject) => {
+      const runner = (typeof google !== 'undefined' && google.script && google.script.run) || null;
+      if (!runner) {
+        const message = `Função de servidor indisponível: ${fn}`;
+        console.warn(message);
+        reject(new Error(message));
+        return;
+      }
 
-    runner.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
-  });
+      runner.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+    });
 }
 
 const gasClient = {
@@ -514,3 +519,4 @@ window.gasClient = gasClient;
 window.state = state;
 window.carregarContasMes = carregarContasMes;
 window.carregarContasFixas = carregarContasFixas;
+</script>
