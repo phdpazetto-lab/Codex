@@ -99,6 +99,7 @@
   function loadMonth() {
     var monthRef = qs('monthInput').value || new Date().toISOString().slice(0,7);
     qs('monthInput').value = monthRef;
+    showStatus('operateStatus', 'Loading month ' + monthRef + '...', false);
     var filters = {
       status: qs('statusFilter').value,
       account: qs('accountFilter').value,
@@ -106,8 +107,19 @@
     };
     google.script.run
       .withSuccessHandler(function (data) {
+        if (!data) {
+          showStatus('operateStatus', 'No data returned for ' + monthRef, true);
+          renderInstances([]);
+          renderKpis(null);
+          return;
+        }
         renderInstances(data.instances || []);
         renderKpis(data.kpis);
+        showStatus('operateStatus', 'Loaded ' + monthRef, false);
+      })
+      .withFailureHandler(function (err) {
+        var message = (err && err.message) ? err.message : 'Failed to load month data';
+        showStatus('operateStatus', message, true);
       })
       .apiEnsureAndList(monthRef, filters);
   }
