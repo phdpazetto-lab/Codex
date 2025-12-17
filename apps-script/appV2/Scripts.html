@@ -1,0 +1,180 @@
+<script>
+  function qs(id) { return document.getElementById(id); }
+  function showStatus(id, message, isError) {
+    var el = qs(id);
+    if (!el) return;
+    el.textContent = message;
+    el.classList.toggle('error', !!isError);
+    el.style.display = message ? 'block' : 'none';
+  }
+
+  function setActiveView(view) {
+    document.querySelectorAll('.view').forEach(function (section) {
+      section.classList.toggle('view--active', section.id === 'view-' + view);
+    });
+    document.querySelectorAll('.nav-btn').forEach(function (btn) {
+      var target = btn.getAttribute('data-view');
+      btn.classList.toggle('is-active', target === view);
+    });
+    if (view === 'operate') {
+      loadMonth();
+    }
+  }
+  function renderBadge(status) {
+    var cls = status === 'PAID' ? 'badge--paid' : status === 'CANCELLED' ? 'badge--cancel' : 'badge--open';
+    return '<span class="badge ' + cls + '">' + status + '</span>';
+  }
+
+  function renderKpis(kpis) {
+    var bar = qs('kpiBar');
+    if (!kpis) { bar.innerHTML = ''; return; }
+    var items = [
+      { label: 'Total Predicted', value: kpis.total_predicted },
+      { label: 'Total Actual', value: kpis.total_actual },
+      { label: 'Total Paid', value: kpis.total_paid },
+      { label: 'Total Open', value: kpis.total_open },
+      { label: 'Total Overdue', value: kpis.total_overdue },
+      { label: 'Count Paid', value: kpis.count_paid },
+      { label: 'Count Open', value: kpis.count_open },
+      { label: 'Count Overdue', value: kpis.count_overdue }
+    ];
+    bar.innerHTML = items.map(function (item) {
+      return '<div class="kpi"><strong>' + item.value + '</strong><div>' + item.label + '</div></div>';
+    }).join('');
+  }
+
+  function renderInstances(instances) {
+    var tbody = document.querySelector('#instancesTable tbody');
+    tbody.innerHTML = '';
+    instances.forEach(function (row) {
+      var tr = document.createElement('tr');
+      tr.innerHTML = [
+        row.name,
+        row.account,
+        row.category,
+        formatDate(row.due_date),
+        row.predicted_value,
+        row.actual_value || '',
+        renderBadge(row.status),
+        formatDate(row.paid_at),
+        row.payment_method || '',
+        row.notes || '',
+        String(row.is_overdue) === 'TRUE' || row.is_overdue === true ? 'Yes' : 'No',
+        renderActions(row)
+      ].map(function (cell) { return '<td>' + cell + '</td>'; }).join('');
+      tbody.appendChild(tr);
+    });
+  }
+
+  function formatDate(value) {
+    if (!value) return '';
+    try {
+      return new Date(value).toISOString().slice(0, 10);
+    } catch (e) {
+      return value;
+    }
+  }
+
+  function renderActions(row) {
+    var payBtn = '<button data-action="pay" data-id="' + row.instance_id + '">Mark Paid</button>';
+    var cancelBtn = '<button data-action="cancel" data-id="' + row.instance_id + '">Cancel</button>';
+    return payBtn + cancelBtn;
+  }
+
+  function attachTableEvents() {
+    document.querySelector('#instancesTable tbody').addEventListener('click', function (e) {
+      if (e.target.tagName !== 'BUTTON') return;
+      var id = e.target.getAttribute('data-id');
+      var action = e.target.getAttribute('data-action');
+      if (action === 'pay') {
+        var value = prompt('Actual value paid?');
+        google.script.run.withSuccessHandler(loadMonth).apiMarkPaid(id, value, new Date());
+      }
+      if (action === 'cancel') {
+        google.script.run.withSuccessHandler(loadMonth).apiPatchInstance(id, { status: 'CANCELLED' });
+      }
+    });
+  }
+
+  function loadMonth() {
+    var monthRef = qs('monthInput').value || new Date().toISOString().slice(0,7);
+    qs('monthInput').value = monthRef;
+    showStatus('operateStatus', 'Loading month ' + monthRef + '...', false);
+    var filters = {
+      status: qs('statusFilter').value,
+      account: qs('accountFilter').value,
+      category: qs('categoryFilter').value
+    };
+    google.script.run
+      .withSuccessHandler(function (data) {
+        if (!data) {
+          showStatus('operateStatus', 'No data returned for ' + monthRef, true);
+          renderInstances([]);
+          renderKpis(null);
+          return;
+        }
+        renderInstances(data.instances || []);
+        renderKpis(data.kpis);
+        showStatus('operateStatus', 'Loaded ' + monthRef, false);
+      })
+      .withFailureHandler(function (err) {
+        var message = (err && err.message) ? err.message : 'Failed to load month data';
+        showStatus('operateStatus', message, true);
+      })
+      .apiEnsureAndList(monthRef, filters);
+  }
+
+  function handleOneOffForm() {
+    var form = qs('oneOffForm');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var data = Object.fromEntries(new FormData(form));
+      data.predicted_value = Number(data.predicted_value);
+      if (data.actual_value) data.actual_value = Number(data.actual_value);
+      google.script.run
+        .withSuccessHandler(function () {
+          form.reset();
+          showStatus('oneOffStatus', 'One-off bill saved.');
+          loadMonth();
+        })
+        .withFailureHandler(function (err) {
+          showStatus('oneOffStatus', err && err.message ? err.message : 'Error saving one-off bill', true);
+        })
+        .apiAddOneOff(data);
+    });
+  }
+
+  function handleRecurringForm() {
+    var form = qs('recurringForm');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var data = Object.fromEntries(new FormData(form));
+      data.recurrence_day = Number(data.recurrence_day);
+      data.predicted_value = Number(data.predicted_value);
+      data.active = String(data.active) !== 'false';
+      google.script.run
+        .withSuccessHandler(function () {
+          form.reset();
+          showStatus('recurringStatus', 'Recurring bill saved.');
+        })
+        .withFailureHandler(function (err) {
+          showStatus('recurringStatus', err && err.message ? err.message : 'Error saving recurring bill', true);
+        })
+        .apiCreateRecurring(data);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.nav-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { setActiveView(btn.getAttribute('data-view')); });
+    });
+    attachTableEvents();
+    qs('refreshBtn').addEventListener('click', loadMonth);
+    ['statusFilter', 'accountFilter', 'categoryFilter'].forEach(function (id) {
+      qs(id).addEventListener('change', loadMonth);
+    });
+    handleOneOffForm();
+    handleRecurringForm();
+    setActiveView('home');
+  });
+</script>
