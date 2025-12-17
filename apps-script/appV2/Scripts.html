@@ -1,5 +1,25 @@
 <script>
   function qs(id) { return document.getElementById(id); }
+  function showStatus(id, message, isError) {
+    var el = qs(id);
+    if (!el) return;
+    el.textContent = message;
+    el.classList.toggle('error', !!isError);
+    el.style.display = message ? 'block' : 'none';
+  }
+
+  function setActiveView(view) {
+    document.querySelectorAll('.view').forEach(function (section) {
+      section.classList.toggle('view--active', section.id === 'view-' + view);
+    });
+    document.querySelectorAll('.nav-btn').forEach(function (btn) {
+      var target = btn.getAttribute('data-view');
+      btn.classList.toggle('is-active', target === view);
+    });
+    if (view === 'operate') {
+      loadMonth();
+    }
+  }
   function renderBadge(status) {
     var cls = status === 'PAID' ? 'badge--paid' : status === 'CANCELLED' ? 'badge--cancel' : 'badge--open';
     return '<span class="badge ' + cls + '">' + status + '</span>';
@@ -102,19 +122,47 @@
       google.script.run
         .withSuccessHandler(function () {
           form.reset();
+          showStatus('oneOffStatus', 'One-off bill saved.');
           loadMonth();
+        })
+        .withFailureHandler(function (err) {
+          showStatus('oneOffStatus', err && err.message ? err.message : 'Error saving one-off bill', true);
         })
         .apiAddOneOff(data);
     });
   }
 
+  function handleRecurringForm() {
+    var form = qs('recurringForm');
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var data = Object.fromEntries(new FormData(form));
+      data.recurrence_day = Number(data.recurrence_day);
+      data.predicted_value = Number(data.predicted_value);
+      data.active = String(data.active) !== 'false';
+      google.script.run
+        .withSuccessHandler(function () {
+          form.reset();
+          showStatus('recurringStatus', 'Recurring bill saved.');
+        })
+        .withFailureHandler(function (err) {
+          showStatus('recurringStatus', err && err.message ? err.message : 'Error saving recurring bill', true);
+        })
+        .apiCreateRecurring(data);
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.nav-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () { setActiveView(btn.getAttribute('data-view')); });
+    });
     attachTableEvents();
     qs('refreshBtn').addEventListener('click', loadMonth);
     ['statusFilter', 'accountFilter', 'categoryFilter'].forEach(function (id) {
       qs(id).addEventListener('change', loadMonth);
     });
     handleOneOffForm();
-    loadMonth();
+    handleRecurringForm();
+    setActiveView('home');
   });
 </script>
